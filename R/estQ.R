@@ -96,7 +96,6 @@ estQ.SuperLearner<-function(
         if(ncol(X)==0){ #empty model
             mean(Y)
         }else{
-            require(SuperLearner)
             SuperLearner.args<-c(
                 list(Y=Y,X=X,family=gaussian()),
                 Q.SuperLearner.control
