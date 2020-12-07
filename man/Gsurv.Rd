@@ -15,6 +15,7 @@ Gsurv(
   event.var,
   event.formula = NULL,
   Q.formula = ~.,
+  nfold = 1,
   randomForestSRC.control = list(),
   randomForestSRC.oob = TRUE,
   Q.SuperLearner.control = list(SL.library = "SL.lm")
@@ -41,9 +42,11 @@ Gsurv(
 
 \item{Q.formula}{formula to specify covariates being used for estimating P(T <= t | T > \code{check.in.times[truncation.index]}, covariates available at \code{check.in.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{check.in.times[truncation.index]}.}
 
+\item{nfold}{number of folds in sample splitting when estimating the survival curves of time to event in each time window. Default is 1 corresponding to no sample splitting.}
+
 \item{randomForestSRC.control}{a list containing optional arguments passed to \code{\link[randomForestSRC]{rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC]{rfsrc}} by running a command like \code{do.call(rfsrc, randomForestSRC.control)}. The user should not specify \code{formula} and \code{data}.}
 
-\item{randomForestSRC.oob}{whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}}}
+\item{randomForestSRC.oob}{whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (\code{nfold=1})}
 
 \item{Q.SuperLearner.control}{a list containing optional arguments passed to \code{\link[SuperLearner]{SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner]{SuperLearner}} by running a command like \code{do.call(SuperLearner, Q.SuperLearner.control)}. Default is \code{list(SL.library="SL.lm")}, which uses linear regression. The user should not specify \code{Y}, \code{X} and \code{family}, and must specify \code{SL.library} if default is not used.}
 }

@@ -13,8 +13,9 @@
 #' @param event.var (character) name of the variable containing indicator of event/censoring in the data frame `follow.up.time`.
 #' @param event.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each check-in time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all check-in times, which includes main effects of all covariates available at each check-in time.
 #' @param Q.formula formula to specify covariates being used for estimating P(T <= t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `check.in.times[truncation.index]`.
+#' @param nfold number of folds in sample splitting when estimating the survival curves of time to event in each time window. Default is 1 corresponding to no sample splitting.
 #' @param randomForestSRC.control a list containing optional arguments passed to \code{\link[randomForestSRC]{rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC]{rfsrc}} by running a command like `do.call(rfsrc, randomForestSRC.control)`. The user should not specify `formula` and `data`.
-#' @param randomForestSRC.oob whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}}
+#' @param randomForestSRC.oob whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (`nfold=1`)
 #' @param Q.SuperLearner.control a list containing optional arguments passed to \code{\link[SuperLearner]{SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner]{SuperLearner}} by running a command like `do.call(SuperLearner, Q.SuperLearner.control)`. Default is `list(SL.library="SL.lm")`, which uses linear regression. The user should not specify `Y`, `X` and `family`, and must specify `SL.library` if default is not used.
 #' @return a list of fitted `SuperLearner` models corresponding to each t in `tvals`. If `Q.formula` is empty, then return a list of numbers, each being estimated P(T <= t) for t in `tvals`.
 #' @section Formula arguments:
@@ -31,6 +32,7 @@ Gsurv<-function(
     event.var,
     event.formula=NULL,
     Q.formula=~.,
+    nfold=1,
     randomForestSRC.control=list(),
     randomForestSRC.oob=TRUE,
     Q.SuperLearner.control=list(SL.library="SL.lm")
@@ -176,6 +178,9 @@ Gsurv<-function(
         stop("Q.formula contains covariates not available up to truncation time")
     }
     
+    #check if nfold is a count
+    assert_that(is.count(nfold))
+    
     #check if randomForestSRC.control is a list and whether it specifies formula and data
     assert_that(is.list(randomForestSRC.control))
     if(any(c("formula","data") %in% names(randomForestSRC.control))){
@@ -199,9 +204,9 @@ Gsurv<-function(
     ############################################################################
     #K is the last check.in.time that needs to be considered
     K<-find.last.TRUE.index(check.in.times<tail(tvals,1))
-
+    
     index.shift<-truncation.index-1 #shift for the index of pred_event.list
-
+    
     pred_event.list<-lapply(truncation.index:K,function(k){
         history<-reduce(covariates[1:k],.f=function(d1,d2){
             right_join(d1,d2,by=id.var)
@@ -222,18 +227,45 @@ Gsurv<-function(
             form<-as.formula(paste("Surv(",time.var,",",event.var,")",
                                    paste(as.character(event.formula[[k-index.shift]]),collapse=""),
                                    collapse=""))
-            rfsrc.args<-c(
-                list(formula=form,data=event.surv.data%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
-                randomForestSRC.control
-            )
-            model<-do.call(rfsrc,rfsrc.args)
-            if(randomForestSRC.oob){
-                surv<-model$survival.oob
+            if(nfold==1){
+                rfsrc.args<-c(
+                    list(formula=form,data=event.surv.data%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
+                    randomForestSRC.control
+                )
+                model<-do.call(rfsrc,rfsrc.args)
+                if(randomForestSRC.oob){
+                    surv<-model$survival.oob
+                }else{
+                    surv<-model$survival
+                }
+                rownames(surv)<-pull(event.surv.data,.data[[id.var]])
+                pred_event_obj<-pred_surv(time=model$time.interest,surv=surv)
             }else{
-                surv<-model$survival
+                all.times<-event.surv.data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+                folds<-create.folds(pull(event.surv.data,.data[[id.var]]),nfold)
+                surv.list<-lapply(folds,function(fold){
+                    rfsrc.args<-c(
+                        list(formula=form,data=event.surv.data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
+                        randomForestSRC.control
+                    )
+                    model<-do.call(rfsrc,rfsrc.args)
+                    predict.model<-predict(model,event.surv.data%>%filter(.data[[id.var]] %in% .env$fold))
+                    surv<-lapply(all.times,function(t){
+                        i<-find.first.TRUE.index(predict.model$time.interest<=t,noTRUE=0)
+                        if(i==0){
+                            out<-matrix(1,nrow=length(fold),ncol=1)
+                        }else{
+                            out<-predict.model$survival[,i]
+                        }
+                        out
+                    })%>%do.call(what=cbind)
+                    rownames(surv)<-fold
+                    surv
+                })
+                surv<-do.call(rbind,surv.list)
+                surv<-surv[order(rownames(surv)),]
+                pred_event_obj<-pred_surv(time=all.times,surv=surv)
             }
-            rownames(surv)<-pull(event.surv.data,.data[[id.var]])
-            pred_event_obj<-pred_surv(time=model$time.interest,surv=surv)
         }
         
         pred_event_obj

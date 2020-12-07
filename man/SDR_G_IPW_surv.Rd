@@ -16,6 +16,7 @@ SDR_G_IPW_surv(
   event.formula = NULL,
   censor.formula = NULL,
   Q.formula = ~.,
+  nfold = 1,
   randomForestSRC.control = list(),
   randomForestSRC.oob = TRUE,
   Q.SuperLearner.control = list(SL.library = "SL.lm")
@@ -43,6 +44,8 @@ SDR_G_IPW_surv(
 \item{censor.formula}{a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each check-in time. The length should be the number of check in times after \code{truncation.index} (inclusive). Default is \code{~ .} for all check-in times, which includes main effects of all covariates available at each check-in time.}
 
 \item{Q.formula}{formula to specify covariates being used for estimating P(T <= t | T > \code{check.in.times[truncation.index]}, covariates available at \code{check.in.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{check.in.times[truncation.index]}.}
+
+\item{nfold}{number of folds in sample splitting when estimating the survival curves of times to event/censoring in each time window. Default is 1 corresponding to no sample splitting.}
 
 \item{randomForestSRC.control}{a list containing optional arguments passed to \code{\link[randomForestSRC]{rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC]{rfsrc}} by running a command like \code{do.call(rfsrc, randomForestSRC.control)}. The user should not specify \code{formula} and \code{data}.}
 

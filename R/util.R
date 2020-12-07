@@ -43,3 +43,12 @@ admin.censor<-function(follow.up.time,time.var,event.var,censor.time=Inf){
             select(!.data$viewed.censored)
     }
 }
+
+
+#create k folds of a vector id
+create.folds<-function(id,k){
+    order<-sample.int(length(id))
+    d<-suppressWarnings(data.frame(cbind(id[order],1:k)))
+    names(d)<-c("id","fold.id")
+    lapply(tapply(d$id,d$fold.id,identity,simplify=FALSE),sort)
+}
