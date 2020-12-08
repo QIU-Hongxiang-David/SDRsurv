@@ -219,15 +219,15 @@ Gsurv<-function(
         }
         
         event.surv.data<-left_join(history,event.follow.up.time,by=id.var)
-        if(all(pull(event.surv.data,.data[[event.var]])==0)){
-            surv<-matrix(1,nrow=nrow(event.surv.data),ncol=1)
-            rownames(surv)<-pull(event.surv.data,.data[[id.var]])
-            pred_event_obj<-pred_surv(Inf,surv)
-        }else{
-            form<-as.formula(paste("Surv(",time.var,",",event.var,")",
-                                   paste(as.character(event.formula[[k-index.shift]]),collapse=""),
-                                   collapse=""))
-            if(nfold==1){
+        form<-as.formula(paste("Surv(",time.var,",",event.var,")",
+                               paste(as.character(event.formula[[k-index.shift]]),collapse=""),
+                               collapse=""))
+        if(nfold==1){
+            if(all(pull(event.surv.data,.data[[event.var]])==0)){
+                surv<-matrix(1,nrow=nrow(event.surv.data),ncol=1)
+                rownames(surv)<-pull(event.surv.data,.data[[id.var]])
+                pred_event_obj<-pred_surv(Inf,surv)
+            }else{
                 rfsrc.args<-c(
                     list(formula=form,data=event.surv.data%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
                     randomForestSRC.control
@@ -240,10 +240,16 @@ Gsurv<-function(
                 }
                 rownames(surv)<-pull(event.surv.data,.data[[id.var]])
                 pred_event_obj<-pred_surv(time=model$time.interest,surv=surv)
-            }else{
-                all.times<-event.surv.data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
-                folds<-create.folds(pull(event.surv.data,.data[[id.var]]),nfold)
-                surv.list<-lapply(folds,function(fold){
+            }
+        }else{
+            all.times<-event.surv.data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+            folds<-create.folds(pull(event.surv.data,.data[[id.var]]),nfold)
+            surv.list<-lapply(folds,function(fold){
+                if(event.surv.data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
+                    surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
+                    rownames(surv)<-fold
+                    surv
+                }else{
                     rfsrc.args<-c(
                         list(formula=form,data=event.surv.data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
                         randomForestSRC.control
@@ -261,11 +267,11 @@ Gsurv<-function(
                     })%>%do.call(what=cbind)
                     rownames(surv)<-fold
                     surv
-                })
-                surv<-do.call(rbind,surv.list)
-                surv<-surv[order(rownames(surv)),]
-                pred_event_obj<-pred_surv(time=all.times,surv=surv)
-            }
+                }
+            })
+            surv<-do.call(rbind,surv.list)
+            surv<-surv[order(rownames(surv)),,drop=FALSE]
+            pred_event_obj<-pred_surv(time=all.times,surv=surv)
         }
         
         pred_event_obj
