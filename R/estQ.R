@@ -96,11 +96,11 @@ estQ.SuperLearner<-function(
         if(ncol(X)==0){ #empty model
             mean(Y)
         }else{
-            SuperLearner.args<-c(
+            SuperLearner.arg<-c(
                 list(Y=Y,X=X,family=gaussian()),
                 Q.SuperLearner.control
             )
-            do.call(SuperLearner,SuperLearner.args)
+            do.call(SuperLearner,SuperLearner.arg)
         }
     })
 }

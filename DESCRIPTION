@@ -10,7 +10,8 @@ Authors@R:
 Description: This package provides functions for doubly robust estimation of the survival curve with time-varying covariates for an iid sample. Covariates are collected at fixed time points (check-in times); event and censoring are actively monitored so that time to event/censoring (whichever occurs first) is observed. Functions can estimate P(T<=t|T>t0,H=h0) for multiple values of t, where t0 is a check in time, h0 is a subset of covariates available up to t0, and t>t0 is a fixed time. The user may set t0 to be the entry time and h0 to be empty in order to estimate the marginal survival probability.
 License: GPL-3
 Depends: SuperLearner
-Imports: rlang, dplyr (>= 1.0.2), purrr, assertthat, matrixStats, randomForestSRC
+Imports: rlang, dplyr (>= 1.0.2), purrr, assertthat, matrixStats, survival
+Suggests: randomForestSRC, rpart, party, partykit
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

@@ -15,9 +15,8 @@ Gsurv(
   event.var,
   event.formula = NULL,
   Q.formula = ~.,
-  nfold = 1,
-  randomForestSRC.control = list(),
-  randomForestSRC.oob = TRUE,
+  event.method = c("rfsrc", "ctree", "rpart", "cforest", "coxph"),
+  event.control = list(),
   Q.SuperLearner.control = list(SL.library = "SL.lm")
 )
 }
@@ -42,11 +41,9 @@ Gsurv(
 
 \item{Q.formula}{formula to specify covariates being used for estimating P(T <= t | T > \code{check.in.times[truncation.index]}, covariates available at \code{check.in.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{check.in.times[truncation.index]}.}
 
-\item{nfold}{number of folds in sample splitting when estimating the survival curves of time to event in each time window. Default is 1 corresponding to no sample splitting.}
+\item{event.method}{one of \code{"rfsrc"}, \code{"ctree"}, \code{"rpart"}, \code{"cforest"}, \code{"coxph"}. The machine learning method to fit survival survival curves of time to event in each time window. Default is \verb{"rfsrc}. See the underlying wrappers \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}} for the available options.}
 
-\item{randomForestSRC.control}{a list containing optional arguments passed to \code{\link[randomForestSRC]{rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC]{rfsrc}} by running a command like \code{do.call(rfsrc, randomForestSRC.control)}. The user should not specify \code{formula} and \code{data}.}
-
-\item{randomForestSRC.oob}{whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (\code{nfold=1})}
+\item{event.control}{a returned value from \code{\link{fit_surv_option}}}
 
 \item{Q.SuperLearner.control}{a list containing optional arguments passed to \code{\link[SuperLearner]{SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner]{SuperLearner}} by running a command like \code{do.call(SuperLearner, Q.SuperLearner.control)}. Default is \code{list(SL.library="SL.lm")}, which uses linear regression. The user should not specify \code{Y}, \code{X} and \code{family}, and must specify \code{SL.library} if default is not used.}
 }
@@ -58,6 +55,6 @@ Estimate P(T <= t | T > truncation time, covariates available at truncation time
 }
 \section{Formula arguments}{
 
-All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., \code{~ V1 + V2 + V3}. At each check-in time, the corresponding formulas may (and usually should) contain covariates at previous check-in times, and must only include available covariates up to (inclusive) that check-in time. Only main effects are allowed in formulas.
+All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., \code{~ V1 + V2 + V3}. At each check-in time, the corresponding formulas may (and usually should) contain covariates at previous check-in times, and must only include available covariates up to (inclusive) that check-in time. Interactions, polynomials and splines may be treated differently by different machine learning methods to estimate conditional survival curves.
 }
 

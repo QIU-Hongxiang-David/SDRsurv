@@ -29,7 +29,7 @@ pred_surv<-function(time,surv){
 #' @details The predicted/fitted probability matrices in `pred_event_obj` and `pred_censor_obj` must have same row names, i.e., same number of individuals.
 #' @export
 pred_event_censor<-function(pred_event_obj,pred_censor_obj=NULL){
-    if(!("pred_surv" %in% class(pred_event_obj))){
+    if(!inherits(pred_event_obj,"pred_surv")){
         stop("pred_event_obj is not a pred_surv object")
     }
     
@@ -37,7 +37,7 @@ pred_event_censor<-function(pred_event_obj,pred_censor_obj=NULL){
         mat<-matrix(1,nrow=length(pred_event_obj$time),ncol=1)
         rownames(mat)<-rownames(pred_event_obj$surv)
         pred_censor_obj<-pred_surv(Inf,mat)
-    }else if(!("pred_surv" %in% class(pred_censor_obj))){
+    }else if(!inherits(pred_censor_obj,"pred_surv")){
         stop("pred_cens_obj is not a pred_surv object")
     }
     

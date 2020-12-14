@@ -1,3 +1,14 @@
+#copy of .SL.require
+.require<-function (package, message = paste("loading required package (", 
+                                   package, ") failed", sep = "")) 
+{
+    if (!requireNamespace(package, quietly = FALSE)) {
+        stop(message, call. = FALSE)
+    }
+    invisible(TRUE)
+}
+
+
 #find the first index of x that is TRUE
 #noTRUE: return value when none of x is TRUE
 find.first.TRUE.index<-function(x,noTRUE=length(x)+1){
@@ -11,14 +22,14 @@ find.last.TRUE.index<-function(x,noTRUE=0){
 }
 
 #' @title Clip all elements in an array to fall in an interval
-#' @name clip
+#' @name clip_interval
 #' @param x numeric array
 #' @param lower lower end of the interval
 #' @param upper upper end of the interval
 #' @return clipped array
-#' @details For each element `X` in `x`, `clip(X)` equals `lower` if `X`<`lower`, `upper` if `X`>`upper`, and `X` otherwise. This function may be useful to clip predictions to fall in, e.g., \eqn{[0,1]}.
+#' @details For each element `X` in `x`, `clip_interval(X)` equals `lower` if `X`<`lower`, `upper` if `X`>`upper`, and `X` otherwise. This function may be useful to clip predictions to fall in, e.g., \eqn{[0,1]}.
 #' @export
-clip<-function(x,lower,upper){
+clip_interval<-function(x,lower=-Inf,upper=Inf){
     pmax(pmin(x,upper),lower)
 }
 
@@ -51,4 +62,19 @@ create.folds<-function(id,k){
     d<-suppressWarnings(data.frame(cbind(id[order],1:k)))
     names(d)<-c("id","fold.id")
     lapply(tapply(d$id,d$fold.id,identity,simplify=FALSE),sort)
+}
+
+#convert a vector to a row matrix and return the input if it is already a matrix
+#essentially a copy of as.matrix.default
+as.matrix.rowvec<-function(x){
+    if(is.matrix(x)){
+        x
+    }else{
+        array(x,c(1L,length(x)),
+              if(!is.null(names(x)))
+                  list(names(x), NULL)
+              else
+                  NULL
+        )
+    }
 }

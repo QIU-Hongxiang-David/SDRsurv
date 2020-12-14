@@ -13,13 +13,12 @@
 #' @param event.var (character) name of the variable containing indicator of event/censoring in the data frame `follow.up.time`.
 #' @param censor.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each check-in time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all check-in times, which includes main effects of all covariates available at each check-in time.
 #' @param Q.formula formula to specify covariates being used for estimating P(T <= t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `check.in.times[truncation.index]`.
-#' @param nfold number of folds in sample splitting when estimating the survival curves of time to censoring in each time window. Default is 1 corresponding to no sample splitting.
-#' @param randomForestSRC.control a list containing optional arguments passed to \code{\link[randomForestSRC]{rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC]{rfsrc}} by running a command like `do.call(rfsrc, randomForestSRC.control)`. The user should not specify `formula` and `data`.
-#' @param randomForestSRC.oob whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (`nfold=1`)
+#' @param censor.method one of `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`. The machine learning method to fit survival survival curves of time to censoring in each time window. Default is `"rfsrc`. See the underlying wrappers \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}} for the available options.
+#' @param censor.control a returned value from \code{\link{fit_surv_option}}
 #' @param Q.SuperLearner.control a list containing optional arguments passed to \code{\link[SuperLearner]{SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner]{SuperLearner}} by running a command like `do.call(SuperLearner, Q.SuperLearner.control)`. Default is `list(SL.library="SL.lm")`, which uses linear regression. The user should not specify `Y`, `X` and `family`, and must specify `SL.library` if default is not used.
 #' @return a list of fitted `SuperLearner` models corresponding to each t in `tvals`. If `Q.formula` is empty, then return a list of numbers, each being estimated P(T <= t) for t in `tvals`.
 #' @section Formula arguments:
-#' All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., `~ V1 + V2 + V3`. At each check-in time, the corresponding formulas may (and usually should) contain covariates at previous check-in times, and must only include available covariates up to (inclusive) that check-in time. Only main effects are allowed in formulas.
+#' All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., `~ V1 + V2 + V3`. At each check-in time, the corresponding formulas may (and usually should) contain covariates at previous check-in times, and must only include available covariates up to (inclusive) that check-in time. Interactions, polynomials and splines may be treated differently by different machine learning methods to estimate conditional survival curves.
 #' @export
 IPWsurv<-function(
     covariates,
@@ -32,14 +31,15 @@ IPWsurv<-function(
     event.var,
     censor.formula=NULL,
     Q.formula=~.,
-    nfold=1,
-    randomForestSRC.control=list(),
-    randomForestSRC.oob=TRUE,
+    censor.method=c("rfsrc","ctree","rpart","cforest","coxph"),
+    censor.control=list(),
     Q.SuperLearner.control=list(SL.library="SL.lm")
 ){
     assert_that(is.string(id.var))
     assert_that(is.string(time.var))
     assert_that(is.string(event.var))
+    
+    censor.method<-match.arg(censor.method)
     
     K<-length(check.in.times) #number of check-in times
     
@@ -178,18 +178,11 @@ IPWsurv<-function(
         stop("Q.formula contains covariates not available up to truncation time")
     }
     
-    #check if nfold is a count
-    assert_that(is.count(nfold))
-    
-    #check if randomForestSRC.control is a list and whether it specifies formula and data
-    assert_that(is.list(randomForestSRC.control))
-    if(any(c("formula","data") %in% names(randomForestSRC.control))){
-        stop("randomForestSRC.control specifies formula or data")
+    #check if censor.control is a fit_surv_option object
+    if(!inherits(censor.control,"fit_surv_option")){
+        stop("censor.control is not a fit_surv_option object")
     }
     
-    #check if randomForestSRC.oob is logical
-    assert_that(is.flag(randomForestSRC.oob))
-
     #check if Q.SuperLearner.control is a list and whether it specifies Y, X or family
     assert_that(is.list(Q.SuperLearner.control))
     if(any(c("Y","X","family") %in% names(Q.SuperLearner.control))){
@@ -222,60 +215,11 @@ IPWsurv<-function(
         form<-as.formula(paste("Surv(",time.var,",",event.var,")",
                                paste(as.character(censor.formula[[k-index.shift]]),collapse=""),
                                collapse=""))
-        if(nfold==1){
-            if(all(pull(censor.surv.data,.data[[event.var]])==0)){
-                surv<-matrix(1,nrow=nrow(censor.surv.data),ncol=1)
-                rownames(surv)<-pull(censor.surv.data,.data[[id.var]])
-                pred_censor_obj<-pred_surv(Inf,surv)
-            }else{
-                rfsrc.args<-c(
-                    list(formula=form,data=censor.surv.data%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
-                    randomForestSRC.control
-                )
-                model<-do.call(rfsrc,rfsrc.args)
-                if(randomForestSRC.oob){
-                    surv<-model$survival.oob
-                }else{
-                    surv<-model$survival
-                }
-                rownames(surv)<-pull(censor.surv.data,.data[[id.var]])
-                pred_censor_obj<-pred_surv(time=model$time.interest,surv=surv)
-            }
-        }else{
-            all.times<-censor.surv.data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
-            folds<-create.folds(pull(censor.surv.data,.data[[id.var]]),nfold)
-            surv.list<-lapply(folds,function(fold){
-                if(censor.surv.data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
-                    surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
-                    rownames(surv)<-fold
-                    surv
-                }else{
-                    rfsrc.args<-c(
-                        list(formula=form,data=censor.surv.data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
-                        randomForestSRC.control
-                    )
-                    model<-do.call(rfsrc,rfsrc.args)
-                    predict.model<-predict(model,censor.surv.data%>%filter(.data[[id.var]] %in% .env$fold))
-                    surv<-lapply(all.times,function(t){
-                        i<-find.first.TRUE.index(predict.model$time.interest<=t,noTRUE=0)
-                        if(i==0){
-                            out<-matrix(1,nrow=length(fold),ncol=1)
-                        }else{
-                            out<-predict.model$survival[,i]
-                        }
-                        out
-                    })%>%do.call(what=cbind)
-                    rownames(surv)<-fold
-                    surv
-                }
-            })
-            surv<-do.call(rbind,surv.list)
-            surv<-surv[order(rownames(surv)),,drop=FALSE]
-            pred_censor_obj<-pred_surv(time=all.times,surv=surv)
-        }
-        
-        
-        pred_censor_obj
+        fit_surv_arg<-c(
+            list(method=censor.method,formula=form,data=censor.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
+            censor.control
+        )
+        do.call(fit_surv,fit_surv_arg)
     })
     
     ############################################################################
