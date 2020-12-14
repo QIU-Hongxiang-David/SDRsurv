@@ -45,7 +45,7 @@ Gsurv(
 
 \item{event.control}{a returned value from \code{\link{fit_surv_option}}}
 
-\item{Q.SuperLearner.control}{a list containing optional arguments passed to \code{\link[SuperLearner]{SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner]{SuperLearner}} by running a command like \code{do.call(SuperLearner, Q.SuperLearner.control)}. Default is \code{list(SL.library="SL.lm")}, which uses linear regression. The user should not specify \code{Y}, \code{X} and \code{family}, and must specify \code{SL.library} if default is not used.}
+\item{Q.SuperLearner.control}{a list containing optional arguments passed to \code{\link[SuperLearner]{SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner]{SuperLearner}} by running a command like \code{do.call(SuperLearner, Q.SuperLearner.control)}. Default is \code{list(SL.library="SL.lm")}, which uses linear regression. The user should not specify \code{Y}, \code{X} and \code{family}, and must specify \code{SL.library} if default is not used. When \code{Q.formula} only includes an intercept, \code{\link[SuperLearner]{SuperLearner}} will not be called and the default setting can be used.}
 }
 \value{
 a list of fitted \code{SuperLearner} models corresponding to each t in \code{tvals}. If \code{Q.formula} is empty, then return a list of numbers, each being estimated P(T <= t) for t in \code{tvals}.
