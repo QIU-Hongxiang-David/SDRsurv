@@ -37,8 +37,8 @@ SDRsurv<-function(
     Q.formula=~.,
     event.method=c("rfsrc","ctree","rpart","cforest","coxph"),
     censor.method=c("rfsrc","ctree","rpart","cforest","coxph"),
-    event.control=list(),
-    censor.control=list(),
+    event.control=fit_surv_option(),
+    censor.control=fit_surv_option(),
     Q.SuperLearner.control=list(SL.library="SL.lm")
 ){
     assert_that(is.string(id.var))

@@ -16,7 +16,7 @@ IPWsurv(
   censor.formula = NULL,
   Q.formula = ~.,
   censor.method = c("rfsrc", "ctree", "rpart", "cforest", "coxph"),
-  censor.control = list(),
+  censor.control = fit_surv_option(),
   Q.SuperLearner.control = list(SL.library = "SL.lm")
 )
 }

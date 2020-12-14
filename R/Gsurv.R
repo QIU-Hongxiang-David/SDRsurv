@@ -32,7 +32,7 @@ Gsurv<-function(
     event.formula=NULL,
     Q.formula=~.,
     event.method=c("rfsrc","ctree","rpart","cforest","coxph"),
-    event.control=list(),
+    event.control=fit_surv_option(),
     Q.SuperLearner.control=list(SL.library="SL.lm")
 ){
     assert_that(is.string(id.var))
