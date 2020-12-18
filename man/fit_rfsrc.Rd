@@ -13,6 +13,8 @@ fit_rfsrc(
   nfold = 1,
   option = list(),
   oob = TRUE,
+  tune = TRUE,
+  tune.option = list(),
   ...
 )
 }
@@ -32,6 +34,10 @@ fit_rfsrc(
 \item{option}{a list containing optional arguments passed to \code{\link[randomForestSRC]{rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC]{rfsrc}} by running a command like \code{do.call(rfsrc, option)}. The user should not specify \code{formula} and \code{data}.}
 
 \item{oob}{whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (\code{nfold=1})}
+
+\item{tune}{whether to tune \code{mtry} and \code{nodesize}.}
+
+\item{tune.option}{a list containing optional arguments passed to \code{\link[rfsrc:tune]{tune.rfsrc}} if \code{tune=TRUE}; ignored otherwise. \code{doBest} should not be specified.}
 
 \item{...}{ignored}
 }

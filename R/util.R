@@ -1,5 +1,5 @@
 #copy of .SL.require
-.require<-function (package, message = paste("loading required package (", 
+.requireNamespace<-function (package, message = paste("loading required package (", 
                                    package, ") failed", sep = "")) 
 {
     if (!requireNamespace(package, quietly = FALSE)) {
@@ -8,6 +8,15 @@
     invisible(TRUE)
 }
 
+.require<-function(package, message = paste("loading and attaching required package (",package, ") failed", sep = "")){
+    if(!(package %in% .packages())){
+        message(paste("Loading and attaching required package (",package,") to the search list",sep = ""))
+        if (!suppressWarnings(require(package, quietly = TRUE,character.only=TRUE))) {
+            stop(message, call. = FALSE)
+        }
+        invisible(TRUE)
+    }
+}
 
 #find the first index of x that is TRUE
 #noTRUE: return value when none of x is TRUE

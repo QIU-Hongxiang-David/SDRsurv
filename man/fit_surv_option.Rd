@@ -4,14 +4,24 @@
 \alias{fit_surv_option}
 \title{Options of machine learning methods' wrappers for fitting conditional survival curves}
 \usage{
-fit_surv_option(nfold = 1, option = list(), oob = TRUE)
+fit_surv_option(
+  nfold = 1,
+  option = list(),
+  oob = TRUE,
+  tune = TRUE,
+  tune.option = list()
+)
 }
 \arguments{
 \item{nfold}{number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting}
 
-\item{option}{a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like \code{do.call(machine.learning, option)}.}
+\item{option}{a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like \code{do.call(machine.learning, option)}. \code{formula} and \code{data} should not be specified. For \code{\link[randomForestSRC]{rfsrc}}, if \code{tune=TRUE}, then \code{mtry} and \code{nodesize} should not be specified either.}
 
-\item{oob}{whether to use out-of-bag (OOB) fitted values from forests when sample splitting is not used (\code{nfold=1}). Ignored for trees or \code{coxph}.}
+\item{oob}{whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC]{rfsrc}} and \code{\link[party]{cforest}}) when sample splitting is not used (\code{nfold=1}). Ignored otherwise.}
+
+\item{tune}{whether to tune \code{mtry} and \code{nodesize} for \code{\link[randomForestSRC]{rfsrc}}. Ignored for other methods.}
+
+\item{tune.option}{a list containing optional arguments passed to \code{\link[rfsrc:tune]{tune.rfsrc}} if \code{\link[randomForestSRC]{rfsrc}} is used and \code{tune=TRUE}; ignored otherwise. \code{doBest} should not be specified.}
 }
 \description{
 Options of machine learning methods' wrappers for fitting conditional survival curves

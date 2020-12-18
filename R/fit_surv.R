@@ -1,13 +1,16 @@
 #' @title Options of machine learning methods' wrappers for fitting conditional survival curves
 #' @name fit_surv_option
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like `do.call(machine.learning, option)`.
-#' @param oob whether to use out-of-bag (OOB) fitted values from forests when sample splitting is not used (`nfold=1`). Ignored for trees or `coxph`.
+#' @param option a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like `do.call(machine.learning, option)`. `formula` and `data` should not be specified. For \code{\link[randomForestSRC]{rfsrc}}, if `tune=TRUE`, then `mtry` and `nodesize` should not be specified either.
+#' @param oob whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC]{rfsrc}} and \code{\link[party]{cforest}}) when sample splitting is not used (`nfold=1`). Ignored otherwise.
+#' @param tune whether to tune `mtry` and `nodesize` for \code{\link[randomForestSRC]{rfsrc}}. Ignored for other methods.
+#' @param tune.option a list containing optional arguments passed to \code{\link[rfsrc:tune]{tune.rfsrc}} if \code{\link[randomForestSRC]{rfsrc}} is used and `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
 #' @export
-fit_surv_option<-function(nfold=1,option=list(),oob=TRUE){
+fit_surv_option<-function(nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=list()){
     assert_that(is.count(nfold))
     assert_that(is.flag(oob))
-    out<-list(nfold=nfold,option=option,oob=oob)
+    assert_that(is.flag(tune))
+    out<-list(nfold=nfold,option=option,oob=oob,tune=tune,tune.option=tune.option)
     class(out)<-"fit_surv_option"
     out
 }
@@ -44,16 +47,29 @@ fit_no_event<-function(data,id.var){
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
 #' @param option a list containing optional arguments passed to \code{\link[randomForestSRC]{rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC]{rfsrc}} by running a command like `do.call(rfsrc, option)`. The user should not specify `formula` and `data`.
 #' @param oob whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (`nfold=1`)
+#' @param tune whether to tune `mtry` and `nodesize`.
+#' @param tune.option a list containing optional arguments passed to \code{\link[rfsrc:tune]{tune.rfsrc}} if `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
 #' @param ... ignored
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
-fit_rfsrc<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),oob=TRUE,...){
-    .require("randomForestSRC")
+fit_rfsrc<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=list(),...){
+    .requireNamespace("randomForestSRC")
     
     #check if option is a list and whether it specifies formula and data
     assert_that(is.list(option))
     if(any(c("formula","data") %in% names(option))){
         stop("option specifies formula or data")
+    }
+    
+    #check if option is a list and whether it specifies doBest
+    if(tune){
+        assert_that(is.list(tune.option))
+        if("doBest" %in% names(tune.option)){
+            stop("tune.option specifies doBest")
+        }
+        if(any(c("mtry","nodesize") %in% names(option))){
+            stop("option specifies mtry or nodesize with tune=TRUE")
+        }
     }
     
     #check if oob is logical
@@ -63,10 +79,21 @@ fit_rfsrc<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
         if(all(pull(data,.data[[event.var]])==0)){
             fit_no_event(data,id.var)
         }else{
+            if(tune){
+                tune.arg<-c(
+                    list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
+                    tune.option
+                )
+                tune.output<-do.call(randomForestSRC::tune.rfsrc,tune.arg)
+            }
+            
             arg<-c(
                 list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
                 option
             )
+            if(tune){
+                arg<-c(arg,list(mtry=tune.output$optimal["mtry"],nodesize=tune.output$optimal["nodesize"]))
+            }
             model<-do.call(randomForestSRC::rfsrc,arg)
             if(oob){
                 surv<-model$survival.oob
@@ -85,10 +112,21 @@ fit_rfsrc<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
                 rownames(surv)<-fold
                 surv
             }else{
+                if(tune){
+                    tune.arg<-c(
+                        list(formula=formula,data=data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
+                        tune.option
+                    )
+                    tune.output<-do.call(randomForestSRC::tune.rfsrc,tune.arg)
+                }
+                
                 arg<-c(
                     list(formula=formula,data=data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
                     option
                 )
+                if(tune){
+                    arg<-c(arg,list(mtry=tune.output$optimal["mtry"],nodesize=tune.output$optimal["nodesize"]))
+                }
                 model<-do.call(randomForestSRC::rfsrc,arg)
                 predict.model<-predict(model,data%>%filter(.data[[id.var]] %in% .env$fold))
                 surv<-lapply(all.times,function(t){
@@ -126,7 +164,7 @@ fit_rfsrc<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
 fit_ctree<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),...){
-    .require("party")
+    .requireNamespace("party")
     
     #check if option is a list and whether it specifies formula and data
     assert_that(is.list(option))
@@ -208,9 +246,9 @@ fit_ctree<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
 fit_rpart<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),...){
-    .require("rpart")
-    .require("party")
-    .require("partykit")
+    .requireNamespace("rpart")
+    .requireNamespace("party")
+    .requireNamespace("partykit")
     
     #check if option is a list and whether it specifies formula and data
     assert_that(is.list(option))
@@ -293,7 +331,7 @@ fit_rpart<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
 fit_cforest<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),oob=TRUE,...){
-    .require("party")
+    .requireNamespace("party")
     
     #check if option is a list and whether it specifies formula and data
     assert_that(is.list(option))
