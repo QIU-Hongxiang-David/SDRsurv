@@ -19,6 +19,7 @@
 #' @param event.control a returned value from \code{\link{fit_surv_option}}
 #' @param censor.control a returned value from \code{\link{fit_surv_option}}
 #' @param Q.SuperLearner.control a list containing optional arguments passed to \code{\link[SuperLearner]{SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner]{SuperLearner}} by running a command like `do.call(SuperLearner, Q.SuperLearner.control)`. Default is `list(SL.library="SL.lm")`, which uses linear regression. The user should not specify `Y`, `X` and `family`, and must specify `SL.library` if default is not used. When `Q.formula` only includes an intercept, \code{\link[SuperLearner]{SuperLearner}} will not be called and the default setting can be used.
+#' @param denom.survival.trunc the numeric truncation value for the survival function in the denominator. All denominators below `denom.survival.trunc` will be set to `denom.survival.trunc` for numerical stability.
 #' @return a list of fitted `SuperLearner` models corresponding to each t in `tvals`. If `Q.formula` is empty, then return a list of numbers, each being estimated P(T <= t) for t in `tvals`.
 #' @section Formula arguments:
 #' All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., `~ V1 + V2 + V3`. At each check-in time, the corresponding formulas may (and usually should) contain covariates at previous check-in times, and must only include available covariates up to (inclusive) that check-in time. Interactions, polynomials and splines may be treated differently by different machine learning methods to estimate conditional survival curves.
@@ -39,7 +40,8 @@ SDRsurv<-function(
     censor.method=c("rfsrc","ctree","rpart","cforest","coxph"),
     event.control=fit_surv_option(),
     censor.control=fit_surv_option(),
-    Q.SuperLearner.control=list(SL.library="SL.lm")
+    Q.SuperLearner.control=list(SL.library="SL.lm"),
+    denom.survival.trunc=1e-2
 ){
     assert_that(is.string(id.var))
     assert_that(is.string(time.var))

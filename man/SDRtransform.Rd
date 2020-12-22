@@ -12,7 +12,8 @@ SDRtransform(
   truncation.index,
   id.var,
   time.var,
-  event.var
+  event.var,
+  denom.survival.trunc = 0.01
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ SDRtransform(
 \item{time.var}{see \code{\link{SDRsurv}}}
 
 \item{event.var}{see \code{\link{SDRsurv}}}
+
+\item{denom.survival.trunc}{see \code{\link{SDRsurv}}}
 }
 \value{
 a list of list of data frames containing doubly robust transformed pseudo-outcomes that can be used by \code{\link{estQ.SuperLearner}}.

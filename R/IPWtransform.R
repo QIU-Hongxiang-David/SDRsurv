@@ -2,7 +2,7 @@
 #input fitted values should be truncated to minimal that can cover the time window to avoid unnecessary computation
 #input tvals is sorted in increasing order; must all be greater than the smallest time in pred_censor_obj
 #output: matrix of doubly transformed pseudo-outcome at the stage. each row is an individual; each column is a time in tvals
-.IPWtransform<-function(follow.up.time,pred_censor_obj,tvals,next.check.in.time=Inf,id.var,time.var,event.var){
+.IPWtransform<-function(follow.up.time,pred_censor_obj,tvals,next.check.in.time=Inf,id.var,time.var,event.var,denom.survival.trunc){
     tvals.bar<-pmin(tvals,next.check.in.time) #tvals truncated at next check-in time
     
     output<-matrix(nrow=nrow(pred_censor_obj$surv),ncol=length(tvals.bar))
@@ -31,7 +31,7 @@
                         Ghat.Xminus<-pred_censor_obj$surv[i,k.GX-1]
                     }
                     
-                    output[i,j]<-1/Ghat.Xminus
+                    output[i,j]<-1/pmax(Ghat.Xminus,denom.survival.trunc)
                 }else{
                     output[i,j]<-0
                 }
@@ -54,6 +54,7 @@
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
+#' @param denom.survival.trunc see \code{\link{SDRsurv}}
 #' @return  a list of list of data frames containing doubly robust transformed pseudo-outcomes that can be used by \code{\link{estQ.SuperLearner}}.
 #' @section Warning:
 #' This function is designed to be called by \code{\link{IPWsurv}}, therefore inputs are not thoroughly checked. Incorrect inputs may lead to errors with non-informative messages. The user may call this function if more flexibility is desired.
@@ -66,7 +67,8 @@ IPWtransform<-function(
     truncation.index,
     id.var,
     time.var,
-    event.var
+    event.var,
+    denom.survival.trunc=1e-2
 ){
     #K is the last check.in.time that needs to be considered
     K<-find.last.TRUE.index(check.in.times<tail(tvals,1))

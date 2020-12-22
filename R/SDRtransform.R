@@ -2,7 +2,7 @@
 #input fitted values should be truncated to minimal that can cover the time window to avoid unnecessary computation
 #input tvals is sorted in increasing order; must all be greater than the smallest time in pred_event_censor_obj
 #output: matrix of doubly transformed pseudo-outcome at the stage. each row is an individual; each column is a time in tvals
-.DRtransform<-function(follow.up.time,pred_event_censor_obj,tvals,next.check.in.time=Inf,id.var,time.var,event.var){
+.DRtransform<-function(follow.up.time,pred_event_censor_obj,tvals,next.check.in.time=Inf,id.var,time.var,event.var,denom.survival.trunc){
     tvals.bar<-pmin(tvals,next.check.in.time) #tvals truncated at next check-in time
     
     #compute Ghat(s-) at s=event times
@@ -25,12 +25,12 @@
     integrand<-pred_event_censor_obj$event$surv
     for(i in 1:length(pred_event_censor_obj$event$time)){
         if(i==1){
-            integrand[,i]<-(1-pred_event_censor_obj$event$surv[,i])/pred_event_censor_obj$event$surv[,i]/Ghat.minus[,i]
+            integrand[,i]<-(1-pred_event_censor_obj$event$surv[,i])/pred_event_censor_obj$event$surv[,i]/pmax(Ghat.minus[,i],denom.survival.trunc)
         }else{
             integrand[,i]<-(pred_event_censor_obj$event$surv[,i-1]-pred_event_censor_obj$event$surv[,i])/
-                pred_event_censor_obj$event$surv[,i]/
-                pred_event_censor_obj$event$surv[,i-1]/
-                Ghat.minus[,i]
+                pmax(pred_event_censor_obj$event$surv[,i],denom.survival.trunc)/
+                pmax(pred_event_censor_obj$event$surv[,i-1],denom.survival.trunc)/
+                pmax(Ghat.minus[,i],denom.survival.trunc)
         }
     }
     #integral in the DR transform at each event time
@@ -79,7 +79,7 @@
                         Ghat.Xminus<-pred_event_censor_obj$censor$surv[i,k.GX-1]
                     }
 
-                    IPW.term<-1/Shat.X/Ghat.Xminus
+                    IPW.term<-1/pmax(Shat.X,denom.survival.trunc)/pmax(Ghat.Xminus,denom.survival.trunc)
                 }else{
                     IPW.term<-0
                 }
@@ -112,6 +112,7 @@
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
+#' @param denom.survival.trunc see \code{\link{SDRsurv}}
 #' @return  a list of list of data frames containing doubly robust transformed pseudo-outcomes that can be used by \code{\link{estQ.SuperLearner}}.
 #' @section Warning:
 #' This function is designed to be called by other functions such as \code{\link{SDRsurv}}, therefore inputs are not thoroughly checked. Incorrect inputs may lead to errors with non-informative messages. The user may call this function if more flexibility is desired.
@@ -124,7 +125,8 @@ SDRtransform<-function(
     truncation.index,
     id.var,
     time.var,
-    event.var
+    event.var,
+    denom.survival.trunc=1e-2
 ){
     #K is the last check.in.time that needs to be considered
     K<-find.last.TRUE.index(check.in.times<tail(tvals,1))
@@ -147,7 +149,7 @@ SDRtransform<-function(
         valid.tvals<-tvals[tvals>check.in.times[k]]
         .DRtransform(follow.up.time,pred_event_censor_obj,valid.tvals,
                              next.check.in.time=next.check.in.time,
-                             id.var,time.var,event.var)
+                             id.var,time.var,event.var,denom.survival.trunc)
     })
     
     stagewise.pseudo.outcomes<-lapply(tvals,function(t){
