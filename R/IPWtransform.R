@@ -91,7 +91,7 @@ IPWtransform<-function(
         valid.tvals<-tvals[tvals>check.in.times[k]]
         .IPWtransform(follow.up.time,pred_censor_obj,valid.tvals,
                      next.check.in.time=next.check.in.time,
-                     id.var,time.var,event.var)
+                     id.var,time.var,event.var,denom.survival.trunc)
     })
     
     stagewise.pseudo.outcomes<-lapply(tvals,function(t){
