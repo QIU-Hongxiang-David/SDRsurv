@@ -4,7 +4,7 @@
 #' @param option a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like `do.call(machine.learning, option)`. `formula` and `data` should not be specified. For \code{\link[randomForestSRC]{rfsrc}}, if `tune=TRUE`, then `mtry` and `nodesize` should not be specified either.
 #' @param oob whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC]{rfsrc}} and \code{\link[party]{cforest}}) when sample splitting is not used (`nfold=1`). Ignored otherwise.
 #' @param tune whether to tune `mtry` and `nodesize` for \code{\link[randomForestSRC]{rfsrc}}. Ignored for other methods.
-#' @param tune.option a list containing optional arguments passed to \code{\link[rfsrc:tune]{tune.rfsrc}} if \code{\link[randomForestSRC]{rfsrc}} is used and `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
+#' @param tune.option a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{tune.rfsrc}} if \code{\link[randomForestSRC]{rfsrc}} is used and `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
 #' @export
 fit_surv_option<-function(nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=list()){
     assert_that(is.count(nfold))

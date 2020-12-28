@@ -21,7 +21,7 @@ fit_surv_option(
 
 \item{tune}{whether to tune \code{mtry} and \code{nodesize} for \code{\link[randomForestSRC]{rfsrc}}. Ignored for other methods.}
 
-\item{tune.option}{a list containing optional arguments passed to \code{\link[rfsrc:tune]{tune.rfsrc}} if \code{\link[randomForestSRC]{rfsrc}} is used and \code{tune=TRUE}; ignored otherwise. \code{doBest} should not be specified.}
+\item{tune.option}{a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{tune.rfsrc}} if \code{\link[randomForestSRC]{rfsrc}} is used and \code{tune=TRUE}; ignored otherwise. \code{doBest} should not be specified.}
 }
 \description{
 Options of machine learning methods' wrappers for fitting conditional survival curves
