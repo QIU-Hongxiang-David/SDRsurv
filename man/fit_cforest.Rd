@@ -17,7 +17,7 @@ fit_cforest(
 )
 }
 \arguments{
-\item{formula}{formula used by \code{\link[party]{cforest}}}
+\item{formula}{formula used by \code{\link[party:cforest]{party::cforest}}}
 
 \item{data}{data containing all covariates, follow-up time, event indicator and id}
 
@@ -29,9 +29,9 @@ fit_cforest(
 
 \item{nfold}{number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting}
 
-\item{option}{a list containing optional arguments passed to \code{\link[party]{cforest}}. We encourage using a named list. Will be passed to \code{\link[party]{cforest}} by running a command like \code{do.call(cforest, option)}. The user should not specify \code{formula} and \code{data}.}
+\item{option}{a list containing optional arguments passed to \code{\link[party:cforest]{party::cforest}}. We encourage using a named list. Will be passed to \code{\link[party:cforest]{party::cforest}} by running a command like \code{do.call(cforest, option)}. The user should not specify \code{formula} and \code{data}.}
 
-\item{oob}{whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (\code{nfold=1})}
+\item{oob}{whether to use out-of-bag (OOB) fitted values from \code{\link[party:cforest]{party::cforest}} when sample splitting is not used (\code{nfold=1})}
 
 \item{...}{ignored}
 }

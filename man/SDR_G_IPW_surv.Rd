@@ -55,7 +55,7 @@ SDR_G_IPW_surv(
 
 \item{censor.control}{a returned value from \code{\link{fit_surv_option}}}
 
-\item{Q.SuperLearner.control}{a list containing optional arguments passed to \code{\link[SuperLearner]{SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner]{SuperLearner}} by running a command like \code{do.call(SuperLearner, Q.SuperLearner.control)}. Default is \code{list(SL.library="SL.lm")}, which uses linear regression. The user should not specify \code{Y}, \code{X} and \code{family}, and must specify \code{SL.library} if default is not used. When \code{Q.formula} only includes an intercept, \code{\link[SuperLearner]{SuperLearner}} will not be called and the default setting can be used.}
+\item{Q.SuperLearner.control}{a list containing optional arguments passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} by running a command like \code{do.call(SuperLearner, Q.SuperLearner.control)}. Default is \code{list(SL.library="SL.lm")}, which uses linear regression. The user should not specify \code{Y}, \code{X} and \code{family}, and must specify \code{SL.library} if default is not used. When \code{Q.formula} only includes an intercept, \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} will not be called and the default setting can be used.}
 
 \item{denom.survival.trunc}{the numeric truncation value for the denominator. All denominators below \code{denom.survival.trunc} will be set to \code{denom.survival.trunc} for numerical stability.}
 }
@@ -63,7 +63,7 @@ SDR_G_IPW_surv(
 a list containing three lists of fitted \code{SuperLearner} models corresponding to each t in \code{tvals}. The three elements correspond to SDR, G-computation and IPW, respectively. If \code{Q.formula} is empty, then return a list of numbers, each being estimated P(T <= t) for t in \code{tvals}.
 }
 \description{
-Estimate P(T <= t | T > truncation time, covariates available at truncation time) for given t, where T is the time to event, using all three methods based on sequentially doubly robust, G-computation and inverse probability weighting (IPW) transformations. Use \code{\link[randomForestSRC]{rfsrc}} to fit survival curves of time to event/censoring at each stage and then use \code{\link[SuperLearner]{SuperLearner}} to regress pseudo-outcome on covariates in order to estimate P(T <= t | T > truncation time, covariates available at truncation time). This function is faster than running \code{\link{SDRsurv}}, \code{\link{Gsurv}} and \code{\link{IPWsurv}} separately as the survival curves are fitted only once.
+Estimate P(T <= t | T > truncation time, covariates available at truncation time) for given t, where T is the time to event, using all three methods based on sequentially doubly robust, G-computation and inverse probability weighting (IPW) transformations. Use a user-specified flexible method to fit survival curves of time to event/censoring at each stage and then use \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} to regress pseudo-outcome on covariates in order to estimate P(T <= t | T > truncation time, covariates available at truncation time). This function is faster than running \code{\link{SDRsurv}}, \code{\link{Gsurv}} and \code{\link{IPWsurv}} separately as the survival curves are fitted only once.
 }
 \section{Formula arguments}{
 

@@ -16,7 +16,7 @@ fit_rpart(
 )
 }
 \arguments{
-\item{formula}{formula used by \code{\link[rpart]{rpart}}}
+\item{formula}{formula used by \code{\link[rpart:rpart]{rpart::rpart}}}
 
 \item{data}{data containing all covariates, follow-up time, event indicator and id}
 
@@ -28,7 +28,7 @@ fit_rpart(
 
 \item{nfold}{number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting}
 
-\item{option}{a list containing optional arguments passed to \code{\link[rpart]{rpart}}. We encourage using a named list. Will be passed to \code{\link[rpart]{rpart}} by running a command like \code{do.call(rpart, option)}. The user should not specify \code{formula} and \code{data}.}
+\item{option}{a list containing optional arguments passed to \code{\link[rpart:rpart]{rpart::rpart}}. We encourage using a named list. Will be passed to \code{\link[rpart:rpart]{rpart::rpart}} by running a command like \code{do.call(rpart, option)}. The user should not specify \code{formula} and \code{data}.}
 
 \item{...}{ignored}
 }
@@ -36,5 +36,5 @@ fit_rpart(
 a \code{\link{pred_surv}} class containing fitted survival curves for individuals in \code{data}
 }
 \description{
-First use \code{\link[rpart]{rpart}} to obtain a tree and then use \code{\link[partykit:party-coercion]{as.party}} to obtain Kaplan-Meier fits.
+First use \code{\link[rpart:rpart]{rpart::rpart}} to obtain a tree and then use \code{\link[partykit:party-coercion]{as.party}} to obtain Kaplan-Meier fits.
 }

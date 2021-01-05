@@ -15,13 +15,13 @@ fit_surv_option(
 \arguments{
 \item{nfold}{number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting}
 
-\item{option}{a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like \code{do.call(machine.learning, option)}. \code{formula} and \code{data} should not be specified. For \code{\link[randomForestSRC]{rfsrc}}, if \code{tune=TRUE}, then \code{mtry} and \code{nodesize} should not be specified either.}
+\item{option}{a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like \code{do.call(machine.learning, option)}. \code{formula} and \code{data} should not be specified. For \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, if \code{tune=TRUE}, then \code{mtry} and \code{nodesize} should not be specified either.}
 
-\item{oob}{whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC]{rfsrc}} and \code{\link[party]{cforest}}) when sample splitting is not used (\code{nfold=1}). Ignored otherwise.}
+\item{oob}{whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} and \code{\link[party:cforest]{party::cforest}}) when sample splitting is not used (\code{nfold=1}). Ignored otherwise.}
 
-\item{tune}{whether to tune \code{mtry} and \code{nodesize} for \code{\link[randomForestSRC]{rfsrc}}. Ignored for other methods.}
+\item{tune}{whether to tune \code{mtry} and \code{nodesize} for \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}. Ignored for other methods.}
 
-\item{tune.option}{a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{tune.rfsrc}} if \code{\link[randomForestSRC]{rfsrc}} is used and \code{tune=TRUE}; ignored otherwise. \code{doBest} should not be specified.}
+\item{tune.option}{a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{randomForestSRC::tune.rfsrc}} if \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} is used and \code{tune=TRUE}; ignored otherwise. \code{doBest} should not be specified.}
 }
 \description{
 Options of machine learning methods' wrappers for fitting conditional survival curves

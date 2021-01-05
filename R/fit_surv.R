@@ -1,10 +1,10 @@
 #' @title Options of machine learning methods' wrappers for fitting conditional survival curves
 #' @name fit_surv_option
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like `do.call(machine.learning, option)`. `formula` and `data` should not be specified. For \code{\link[randomForestSRC]{rfsrc}}, if `tune=TRUE`, then `mtry` and `nodesize` should not be specified either.
-#' @param oob whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC]{rfsrc}} and \code{\link[party]{cforest}}) when sample splitting is not used (`nfold=1`). Ignored otherwise.
-#' @param tune whether to tune `mtry` and `nodesize` for \code{\link[randomForestSRC]{rfsrc}}. Ignored for other methods.
-#' @param tune.option a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{tune.rfsrc}} if \code{\link[randomForestSRC]{rfsrc}} is used and `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
+#' @param option a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like `do.call(machine.learning, option)`. `formula` and `data` should not be specified. For \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, if `tune=TRUE`, then `mtry` and `nodesize` should not be specified either.
+#' @param oob whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} and \code{\link[party:cforest]{party::cforest}}) when sample splitting is not used (`nfold=1`). Ignored otherwise.
+#' @param tune whether to tune `mtry` and `nodesize` for \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}. Ignored for other methods.
+#' @param tune.option a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{randomForestSRC::tune.rfsrc}} if \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} is used and `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
 #' @export
 fit_surv_option<-function(nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=list()){
     assert_that(is.count(nfold))
@@ -39,16 +39,16 @@ fit_no_event<-function(data,id.var){
 
 #' @title Wrapper of `randomForestSRC::rfsrc`
 #' @name fit_rfsrc
-#' @param formula formula used by \code{\link[randomForestSRC]{rfsrc}}
+#' @param formula formula used by \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}
 #' @param data data containing all covariates, follow-up time, event indicator and id
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to \code{\link[randomForestSRC]{rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC]{rfsrc}} by running a command like `do.call(rfsrc, option)`. The user should not specify `formula` and `data`.
-#' @param oob whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (`nfold=1`)
+#' @param option a list containing optional arguments passed to \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} by running a command like `do.call(rfsrc, option)`. The user should not specify `formula` and `data`.
+#' @param oob whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} when sample splitting is not used (`nfold=1`)
 #' @param tune whether to tune `mtry` and `nodesize`.
-#' @param tune.option a list containing optional arguments passed to \code{\link[rfsrc:tune]{tune.rfsrc}} if `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
+#' @param tune.option a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{randomForestSRC::tune.rfsrc}} if `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
 #' @param ... ignored
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
@@ -153,13 +153,13 @@ fit_rfsrc<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
 
 #' @title Wrapper of `party::ctree`
 #' @name fit_ctree
-#' @param formula formula used by \code{\link[party]{ctree}}
+#' @param formula formula used by \code{\link[party:ctree]{party::ctree}}
 #' @param data data containing all covariates, follow-up time, event indicator and id
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to \code{\link[party]{ctree}}. We encourage using a named list. Will be passed to \code{\link[party]{ctree}} by running a command like `do.call(ctree, option)`. The user should not specify `formula` and `data`.
+#' @param option a list containing optional arguments passed to \code{\link[party:ctree]{party::ctree}}. We encourage using a named list. Will be passed to \code{\link[party:ctree]{party::ctree}} by running a command like `do.call(ctree, option)`. The user should not specify `formula` and `data`.
 #' @param ... ignored
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
@@ -234,14 +234,14 @@ fit_ctree<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
 
 #' @title Wrapper of `rpart::rpart` and `partykit::as.party`
 #' @name fit_rpart
-#' @description First use \code{\link[rpart]{rpart}} to obtain a tree and then use \code{\link[partykit:party-coercion]{as.party}} to obtain Kaplan-Meier fits.
-#' @param formula formula used by \code{\link[rpart]{rpart}}
+#' @description First use \code{\link[rpart:rpart]{rpart::rpart}} to obtain a tree and then use \code{\link[partykit:party-coercion]{as.party}} to obtain Kaplan-Meier fits.
+#' @param formula formula used by \code{\link[rpart:rpart]{rpart::rpart}}
 #' @param data data containing all covariates, follow-up time, event indicator and id
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to \code{\link[rpart]{rpart}}. We encourage using a named list. Will be passed to \code{\link[rpart]{rpart}} by running a command like `do.call(rpart, option)`. The user should not specify `formula` and `data`.
+#' @param option a list containing optional arguments passed to \code{\link[rpart:rpart]{rpart::rpart}}. We encourage using a named list. Will be passed to \code{\link[rpart:rpart]{rpart::rpart}} by running a command like `do.call(rpart, option)`. The user should not specify `formula` and `data`.
 #' @param ... ignored
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
@@ -319,14 +319,14 @@ fit_rpart<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
 
 #' @title Wrapper of `party::cforest`
 #' @name fit_cforest
-#' @param formula formula used by \code{\link[party]{cforest}}
+#' @param formula formula used by \code{\link[party:cforest]{party::cforest}}
 #' @param data data containing all covariates, follow-up time, event indicator and id
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to \code{\link[party]{cforest}}. We encourage using a named list. Will be passed to \code{\link[party]{cforest}} by running a command like `do.call(cforest, option)`. The user should not specify `formula` and `data`.
-#' @param oob whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (`nfold=1`)
+#' @param option a list containing optional arguments passed to \code{\link[party:cforest]{party::cforest}}. We encourage using a named list. Will be passed to \code{\link[party:cforest]{party::cforest}} by running a command like `do.call(cforest, option)`. The user should not specify `formula` and `data`.
+#' @param oob whether to use out-of-bag (OOB) fitted values from \code{\link[party:cforest]{party::cforest}} when sample splitting is not used (`nfold=1`)
 #' @param ... ignored
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
@@ -405,15 +405,15 @@ fit_cforest<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list
 
 #' @title Wrapper of `survival::coxph`
 #' @name fit_coxph
-#' @param formula formula used by \code{\link[survival]{coxph}}. Currently \code{\link[survival]{strata}} is not supported.
+#' @param formula formula used by \code{\link[survival:coxph]{survival::coxph}}. Currently \code{\link[survival]{strata}} is not supported.
 #' @param data data containing all covariates, follow-up time, event indicator and id
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to \code{\link[survival]{coxph}}. We encourage using a named list. Will be passed to \code{\link[survival]{coxph}} by running a command like `do.call(coxph, option)`. The user should not specify `formula` and `data`.
+#' @param option a list containing optional arguments passed to \code{\link[survival:coxph]{survival::coxph}}. We encourage using a named list. Will be passed to \code{\link[survival:coxph]{survival::coxph}} by running a command like `do.call(coxph, option)`. The user should not specify `formula` and `data`.
 #' @param ... ignored
-#' @param option a list containing optional arguments passed to \code{\link[survival]{coxph}}. We encourage using a named list. Will be passed to \code{\link[survival]{coxph}} by running a command like `do.call(coxph, option)`. The user should not specify `formula` and `data`.
+#' @param option a list containing optional arguments passed to \code{\link[survival:coxph]{survival::coxph}}. We encourage using a named list. Will be passed to \code{\link[survival:coxph]{survival::coxph}} by running a command like `do.call(coxph, option)`. The user should not specify `formula` and `data`.
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
 fit_coxph<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),...){

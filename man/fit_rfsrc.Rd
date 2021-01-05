@@ -19,7 +19,7 @@ fit_rfsrc(
 )
 }
 \arguments{
-\item{formula}{formula used by \code{\link[randomForestSRC]{rfsrc}}}
+\item{formula}{formula used by \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}}
 
 \item{data}{data containing all covariates, follow-up time, event indicator and id}
 
@@ -31,13 +31,13 @@ fit_rfsrc(
 
 \item{nfold}{number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting}
 
-\item{option}{a list containing optional arguments passed to \code{\link[randomForestSRC]{rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC]{rfsrc}} by running a command like \code{do.call(rfsrc, option)}. The user should not specify \code{formula} and \code{data}.}
+\item{option}{a list containing optional arguments passed to \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}. We encourage using a named list. Will be passed to \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} by running a command like \code{do.call(rfsrc, option)}. The user should not specify \code{formula} and \code{data}.}
 
-\item{oob}{whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC]{rfsrc}} when sample splitting is not used (\code{nfold=1})}
+\item{oob}{whether to use out-of-bag (OOB) fitted values from \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} when sample splitting is not used (\code{nfold=1})}
 
 \item{tune}{whether to tune \code{mtry} and \code{nodesize}.}
 
-\item{tune.option}{a list containing optional arguments passed to \code{\link[rfsrc:tune]{tune.rfsrc}} if \code{tune=TRUE}; ignored otherwise. \code{doBest} should not be specified.}
+\item{tune.option}{a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{randomForestSRC::tune.rfsrc}} if \code{tune=TRUE}; ignored otherwise. \code{doBest} should not be specified.}
 
 \item{...}{ignored}
 }

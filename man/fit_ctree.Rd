@@ -16,7 +16,7 @@ fit_ctree(
 )
 }
 \arguments{
-\item{formula}{formula used by \code{\link[party]{ctree}}}
+\item{formula}{formula used by \code{\link[party:ctree]{party::ctree}}}
 
 \item{data}{data containing all covariates, follow-up time, event indicator and id}
 
@@ -28,7 +28,7 @@ fit_ctree(
 
 \item{nfold}{number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting}
 
-\item{option}{a list containing optional arguments passed to \code{\link[party]{ctree}}. We encourage using a named list. Will be passed to \code{\link[party]{ctree}} by running a command like \code{do.call(ctree, option)}. The user should not specify \code{formula} and \code{data}.}
+\item{option}{a list containing optional arguments passed to \code{\link[party:ctree]{party::ctree}}. We encourage using a named list. Will be passed to \code{\link[party:ctree]{party::ctree}} by running a command like \code{do.call(ctree, option)}. The user should not specify \code{formula} and \code{data}.}
 
 \item{...}{ignored}
 }

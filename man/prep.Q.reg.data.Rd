@@ -29,7 +29,7 @@ A list containing:
 All data frames are sorted by \code{id.var}.
 }
 \description{
-Sum up pseudo-outcomes in each time window and produce the final pseudo-outcome in the regression to estimate P(T <= t | T > truncation time, covariates available at truncation time); link covariates at each check-in time up to truncation index to form the data with all historic covariates that can be used in the regression. The output can be used by \code{\link[SuperLearner]{SuperLearner}} or other regression methods for the final estimation.
+Sum up pseudo-outcomes in each time window and produce the final pseudo-outcome in the regression to estimate P(T <= t | T > truncation time, covariates available at truncation time); link covariates at each check-in time up to truncation index to form the data with all historic covariates that can be used in the regression. The output can be used by \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} or other regression methods for the final estimation.
 }
 \section{Warning}{
 
