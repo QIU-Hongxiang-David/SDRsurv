@@ -10,6 +10,7 @@ estQ.SuperLearner(
   truncation.index,
   id.var,
   Q.formula = ~.,
+  est.cdf = TRUE,
   Q.SuperLearner.control = list(SL.library = "SL.lm")
 )
 }
@@ -23,6 +24,8 @@ estQ.SuperLearner(
 \item{id.var}{(character) name of the variable that identifies each individual.}
 
 \item{Q.formula}{formula to specify covariates being used for estimating P(T <= t | T > \code{check.in.times[truncation.index]}, covariates available at \code{check.in.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability, which is simply the mean of pseudo-outcomes. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{truncation.time}.}
+
+\item{est.cdf}{whether to estimate (conditional) CDF or survival function. Default is \code{TRUE}. Set to \code{FALSE} to estimate the survival function.}
 
 \item{Q.SuperLearner.control}{a list containing optional arguments passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} by running a command like \code{do.call(SuperLearner, Q.SuperLearner.control)}. The user should not specify \code{Y}, \code{X} and \code{family}. This argument is ignored if \code{Q.formula} has no covariates. When \code{Q.formula} only includes an intercept, \code{\link[SuperLearner]{SuperLearner}} is not called.}
 }

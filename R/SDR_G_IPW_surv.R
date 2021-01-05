@@ -14,6 +14,7 @@
 #' @param event.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each check-in time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all check-in times, which includes main effects of all covariates available at each check-in time.
 #' @param censor.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each check-in time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all check-in times, which includes main effects of all covariates available at each check-in time.
 #' @param Q.formula formula to specify covariates being used for estimating P(T <= t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `check.in.times[truncation.index]`.
+#' @param est.cdf whether to estimate (conditional) CDF or survival function. Default is `TRUE`. Set to `FALSE` to estimate the survival function.
 #' @param event.method one of `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit survival survival curves of time to event in each time window. Default is `"rfsrc`. See the underlying wrappers \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for the available options.
 #' @param censor.method one of `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit survival survival curves of time to censoring in each time window. Similar to `event.method`.
 #' @param event.control a returned value from \code{\link{fit_surv_option}}
@@ -36,6 +37,7 @@ SDR_G_IPW_surv<-function(
     event.formula=NULL,
     censor.formula=NULL,
     Q.formula=~.,
+    est.cdf=TRUE,
     event.method=c("rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
     censor.method=c("rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
     event.control=fit_surv_option(),
@@ -116,6 +118,9 @@ SDR_G_IPW_surv<-function(
     
     #set default tvals and check they are numbers that are greater than the first check-in time
     if(is.null(tvals)){
+        if(any(c(event.method,censor.method) %in% c("coxtime","deepsurv","dnnsurv","akritas"))){
+            warning("When tvals are all event times, using coxtime, deepsurv, dnnsurv or akritas may lead to imprecision caused by conversion between numeric and character.")
+        }
         tvals<-all.event.times
     }
     assert_that(is.numeric(tvals),noNA(tvals))
@@ -272,8 +277,8 @@ SDR_G_IPW_surv<-function(
     ############################################################################
     # run regular regression (run through each tvals)
     ############################################################################
-    SDR.output<-estQ.SuperLearner(covariates,SDR.stagewise.pseudo.outcomes,truncation.index,id.var,Q.formula,Q.SuperLearner.control)
-    G.output<-estQ.SuperLearner(covariates,G.stagewise.pseudo.outcomes,truncation.index,id.var,Q.formula,Q.SuperLearner.control)
-    IPW.output<-estQ.SuperLearner(covariates,IPW.stagewise.pseudo.outcomes,truncation.index,id.var,Q.formula,Q.SuperLearner.control)
+    SDR.output<-estQ.SuperLearner(covariates,SDR.stagewise.pseudo.outcomes,truncation.index,id.var,Q.formula,est.cdf,Q.SuperLearner.control)
+    G.output<-estQ.SuperLearner(covariates,G.stagewise.pseudo.outcomes,truncation.index,id.var,Q.formula,est.cdf,Q.SuperLearner.control)
+    IPW.output<-estQ.SuperLearner(covariates,IPW.stagewise.pseudo.outcomes,truncation.index,id.var,Q.formula,est.cdf,Q.SuperLearner.control)
     list(SDR=SDR.output,G=G.output,IPW=IPW.output)
 }

@@ -15,6 +15,7 @@ IPWsurv(
   event.var,
   censor.formula = NULL,
   Q.formula = ~.,
+  est.cdf = TRUE,
   censor.method = c("rfsrc", "ctree", "rpart", "cforest", "coxph", "coxtime",
     "deepsurv", "dnnsurv", "akritas"),
   censor.control = fit_surv_option(),
@@ -42,6 +43,8 @@ IPWsurv(
 \item{censor.formula}{a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each check-in time. The length should be the number of check in times after \code{truncation.index} (inclusive). Default is \code{~ .} for all check-in times, which includes main effects of all covariates available at each check-in time.}
 
 \item{Q.formula}{formula to specify covariates being used for estimating P(T <= t | T > \code{check.in.times[truncation.index]}, covariates available at \code{check.in.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{check.in.times[truncation.index]}.}
+
+\item{est.cdf}{whether to estimate (conditional) CDF or survival function. Default is \code{TRUE}. Set to \code{FALSE} to estimate the survival function.}
 
 \item{censor.method}{one of \code{"rfsrc"}, \code{"ctree"}, \code{"rpart"}, \code{"cforest"}, \code{"coxph"}, \code{"coxtime"}, \code{"deepsurv"}, \code{"dnnsurv"}, \code{"akritas"}. The machine learning method to fit survival survival curves of time to censoring in each time window. Default is \verb{"rfsrc}. See the underlying wrappers \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for the available options.}
 

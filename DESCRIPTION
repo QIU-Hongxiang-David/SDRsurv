@@ -11,7 +11,7 @@ Description: This package provides functions for doubly robust estimation of the
 License: GPL-3
 Depends: SuperLearner
 Imports: rlang, dplyr (>= 1.0.2), purrr, assertthat, matrixStats, survival
-Suggests: randomForestSRC, rpart, party, partykit
+Suggests: randomForestSRC, rpart, party, partykit, survivalmodels
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
