@@ -9,7 +9,8 @@ fit_surv_option(
   option = list(),
   oob = TRUE,
   tune = TRUE,
-  tune.option = list()
+  tune.option = list(),
+  lambda = 0.5
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ fit_surv_option(
 \item{tune}{whether to tune \code{mtry} and \code{nodesize} for \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}. Ignored for other methods.}
 
 \item{tune.option}{a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{randomForestSRC::tune.rfsrc}} if \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} is used and \code{tune=TRUE}; ignored otherwise. \code{doBest} should not be specified.}
+
+\item{lambda}{bandwidth parameter for uniform smoothing kernel in nearest neighbours estimation for method \code{"akritas"}. The default value of 0.5 is arbitrary and should be chosen by the user}
 }
 \description{
 Options of machine learning methods' wrappers for fitting conditional survival curves

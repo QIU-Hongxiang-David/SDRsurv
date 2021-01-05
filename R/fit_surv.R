@@ -5,12 +5,14 @@
 #' @param oob whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} and \code{\link[party:cforest]{party::cforest}}) when sample splitting is not used (`nfold=1`). Ignored otherwise.
 #' @param tune whether to tune `mtry` and `nodesize` for \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}. Ignored for other methods.
 #' @param tune.option a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{randomForestSRC::tune.rfsrc}} if \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} is used and `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
+#' @param lambda bandwidth parameter for uniform smoothing kernel in nearest neighbours estimation for method `"akritas"`. The default value of 0.5 is arbitrary and should be chosen by the user
 #' @export
-fit_surv_option<-function(nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=list()){
+fit_surv_option<-function(nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=list(),lambda=0.5){
     assert_that(is.count(nfold))
     assert_that(is.flag(oob))
     assert_that(is.flag(tune))
-    out<-list(nfold=nfold,option=option,oob=oob,tune=tune,tune.option=tune.option)
+    assert_that(is.number(lambda),lambda>0)
+    out<-list(nfold=nfold,option=option,oob=oob,tune=tune,tune.option=tune.option,lambda=lambda)
     class(out)<-"fit_surv_option"
     out
 }
