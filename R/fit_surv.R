@@ -15,7 +15,7 @@ fit_surv_option<-function(nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=l
     out
 }
 
-fit_surv<-function(method=c("rfsrc","ctree","rpart","cforest","coxph"),...){
+fit_surv<-function(method=c("rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),...){
     method<-match.arg(method)
     if(method=="rfsrc"){
         fit_rfsrc(...)
@@ -27,6 +27,14 @@ fit_surv<-function(method=c("rfsrc","ctree","rpart","cforest","coxph"),...){
         fit_cforest(...)
     }else if(method=="coxph"){
         fit_coxph(...)
+    }else if(method=="coxtime"){
+        fit_coxtime(...)
+    }else if(method=="deepsurv"){
+        fit_deepsurv(...)
+    }else if(method=="dnnsurv"){
+        fit_dnnsurv(...)
+    }else if(method=="akritas"){
+        fit_akritas(...)
     }
 }
 
@@ -464,6 +472,309 @@ fit_coxph<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
                         out<-matrix(1,nrow=length(fold),ncol=1)
                     }else{
                         out<-as.matrix(model$surv)[,i]
+                    }
+                    out
+                })%>%do.call(what=cbind)
+                rownames(surv)<-fold
+                surv
+            }
+        })
+        surv<-do.call(rbind,surv.list)
+        surv<-surv[order(rownames(surv)),,drop=FALSE]
+        pred_surv(time=all.times,surv=surv)
+    }
+}
+
+
+
+
+#' @title Wrapper of `survivalmodels::coxtime`
+#' @name fit_coxtime
+#' @param formula formula used by \code{\link[survivalmodels:coxtime]{survivalmodels::coxtime}}
+#' @param data data containing all covariates, follow-up time, event indicator and id
+#' @param id.var see \code{\link{SDRsurv}}
+#' @param time.var see \code{\link{SDRsurv}}
+#' @param event.var see \code{\link{SDRsurv}}
+#' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
+#' @param option a list containing optional arguments passed to \code{\link[survivalmodels:coxtime]{survivalmodels::coxtime}}. We encourage using a named list. Will be passed to \code{\link[survivalmodels:coxtime]{survivalmodels::coxtime}} by running a command like `do.call(coxtime, option)`. The user should not specify `formula`, `data` and `reverse`; `time_variable`, `status_variable`, `x`, `y` will be ignored.
+#' @param ... ignored
+#' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
+#' @export
+fit_coxtime<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),...){
+    .requireNamespace("survivalmodels")
+    
+    #check if option is a list and whether it specifies formula and data
+    assert_that(is.list(option))
+    if(any(c("formula","data","reverse") %in% names(option))){
+        stop("option specifies formula, data or reverse")
+    }
+    
+    all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    if(nfold==1){
+        if(all(pull(data,.data[[event.var]])==0)){
+            fit_no_event(data,id.var)
+        }else{
+            arg<-c(
+                list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
+                option
+            )
+            model<-do.call(survivalmodels::coxtime,arg)
+            surv<-predict(model,type="survival",distr6=FALSE)
+            time<-as.numeric(colnames(surv))
+            rownames(surv)<-pull(data,.data[[id.var]])
+            colnames(surv)<-NULL
+            pred_surv(time=time,surv=surv)
+        }
+    }else{
+        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        surv.list<-lapply(folds,function(fold){
+            if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
+                surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
+                rownames(surv)<-fold
+                surv
+            }else{
+                arg<-c(
+                    list(formula=formula,data=data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
+                    option
+                )
+                model<-do.call(survivalmodels::coxtime,arg)
+                prediction<-predict(model,data%>%filter(.data[[id.var]] %in% .env$fold),type="survival",distr6=FALSE)
+                time<-as.numeric(colnames(prediction))
+                colnames(prediction)<-NULL
+                surv<-lapply(all.times,function(t){
+                    i<-find.first.TRUE.index(time<=t,noTRUE=0)
+                    if(i==0){
+                        out<-matrix(1,nrow=length(fold),ncol=1)
+                    }else{
+                        out<-prediction[,i]
+                    }
+                    out
+                })%>%do.call(what=cbind)
+                rownames(surv)<-fold
+                surv
+            }
+        })
+        surv<-do.call(rbind,surv.list)
+        surv<-surv[order(rownames(surv)),,drop=FALSE]
+        pred_surv(time=all.times,surv=surv)
+    }
+}
+
+
+
+
+
+#' @title Wrapper of `survivalmodels::deepsurv`
+#' @name fit_deepsurv
+#' @param formula formula used by \code{\link[survivalmodels:deepsurv]{survivalmodels::deepsurv}}
+#' @param data data containing all covariates, follow-up time, event indicator and id
+#' @param id.var see \code{\link{SDRsurv}}
+#' @param time.var see \code{\link{SDRsurv}}
+#' @param event.var see \code{\link{SDRsurv}}
+#' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
+#' @param option a list containing optional arguments passed to \code{\link[survivalmodels:deepsurv]{survivalmodels::deepsurv}}. We encourage using a named list. Will be passed to \code{\link[survivalmodels:deepsurv]{survivalmodels::deepsurv}} by running a command like `do.call(deepsurv, option)`. The user should not specify `formula`, `data` and `reverse`; `time_variable`, `status_variable`, `x`, `y` will be ignored.
+#' @param ... ignored
+#' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
+#' @export
+fit_deepsurv<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),...){
+    .requireNamespace("survivalmodels")
+    
+    #check if option is a list and whether it specifies formula and data
+    assert_that(is.list(option))
+    if(any(c("formula","data","reverse") %in% names(option))){
+        stop("option specifies formula, data or reverse")
+    }
+    
+    all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    if(nfold==1){
+        if(all(pull(data,.data[[event.var]])==0)){
+            fit_no_event(data,id.var)
+        }else{
+            arg<-c(
+                list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
+                option
+            )
+            model<-do.call(survivalmodels::deepsurv,arg)
+            surv<-predict(model,type="survival",distr6=FALSE)
+            time<-as.numeric(colnames(surv))
+            rownames(surv)<-pull(data,.data[[id.var]])
+            colnames(surv)<-NULL
+            pred_surv(time=time,surv=surv)
+        }
+    }else{
+        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        surv.list<-lapply(folds,function(fold){
+            if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
+                surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
+                rownames(surv)<-fold
+                surv
+            }else{
+                arg<-c(
+                    list(formula=formula,data=data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
+                    option
+                )
+                model<-do.call(survivalmodels::deepsurv,arg)
+                prediction<-predict(model,data%>%filter(.data[[id.var]] %in% .env$fold),type="survival",distr6=FALSE)
+                time<-as.numeric(colnames(prediction))
+                colnames(prediction)<-NULL
+                surv<-lapply(all.times,function(t){
+                    i<-find.first.TRUE.index(time<=t,noTRUE=0)
+                    if(i==0){
+                        out<-matrix(1,nrow=length(fold),ncol=1)
+                    }else{
+                        out<-prediction[,i]
+                    }
+                    out
+                })%>%do.call(what=cbind)
+                rownames(surv)<-fold
+                surv
+            }
+        })
+        surv<-do.call(rbind,surv.list)
+        surv<-surv[order(rownames(surv)),,drop=FALSE]
+        pred_surv(time=all.times,surv=surv)
+    }
+}
+
+
+
+
+
+#' @title Wrapper of `survivalmodels::dnnsurv`
+#' @name fit_dnnsurv
+#' @param formula formula used by \code{\link[survivalmodels:dnnsurv]{survivalmodels::dnnsurv}}
+#' @param data data containing all covariates, follow-up time, event indicator and id
+#' @param id.var see \code{\link{SDRsurv}}
+#' @param time.var see \code{\link{SDRsurv}}
+#' @param event.var see \code{\link{SDRsurv}}
+#' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
+#' @param option a list containing optional arguments passed to \code{\link[survivalmodels:deepsurv]{survivalmodels::dnnsurv}}. We encourage using a named list. Will be passed to \code{\link[survivalmodels:dnnsurv]{survivalmodels::dnnsurv}} by running a command like `do.call(dnnsurv, option)`. The user should not specify `formula`, `data` and `reverse`; `time_variable`, `status_variable`, `x`, `y` will be ignored.
+#' @param ... ignored
+#' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
+#' @export
+fit_dnnsurv<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),...){
+    .requireNamespace("survivalmodels")
+    
+    #check if option is a list and whether it specifies formula and data
+    assert_that(is.list(option))
+    if(any(c("formula","data","reverse") %in% names(option))){
+        stop("option specifies formula, data or reverse")
+    }
+    
+    all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    if(nfold==1){
+        if(all(pull(data,.data[[event.var]])==0)){
+            fit_no_event(data,id.var)
+        }else{
+            arg<-c(
+                list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
+                option
+            )
+            model<-do.call(survivalmodels::dnnsurv,arg)
+            surv<-predict(model,type="survival",distr6=FALSE)
+            time<-as.numeric(colnames(surv))
+            rownames(surv)<-pull(data,.data[[id.var]])
+            colnames(surv)<-NULL
+            pred_surv(time=time,surv=surv)
+        }
+    }else{
+        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        surv.list<-lapply(folds,function(fold){
+            if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
+                surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
+                rownames(surv)<-fold
+                surv
+            }else{
+                arg<-c(
+                    list(formula=formula,data=data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
+                    option
+                )
+                model<-do.call(survivalmodels::dnnsurv,arg)
+                prediction<-predict(model,data%>%filter(.data[[id.var]] %in% .env$fold),type="survival",distr6=FALSE)
+                time<-as.numeric(colnames(prediction))
+                colnames(prediction)<-NULL
+                surv<-lapply(all.times,function(t){
+                    i<-find.first.TRUE.index(time<=t,noTRUE=0)
+                    if(i==0){
+                        out<-matrix(1,nrow=length(fold),ncol=1)
+                    }else{
+                        out<-prediction[,i]
+                    }
+                    out
+                })%>%do.call(what=cbind)
+                rownames(surv)<-fold
+                surv
+            }
+        })
+        surv<-do.call(rbind,surv.list)
+        surv<-surv[order(rownames(surv)),,drop=FALSE]
+        pred_surv(time=all.times,surv=surv)
+    }
+}
+
+
+
+
+#' @title Wrapper of `survivalmodels::akritas`
+#' @name fit_akritas
+#' @param formula formula used by \code{\link[survivalmodels:akritas]{survivalmodels::akritas}}
+#' @param data data containing all covariates, follow-up time, event indicator and id
+#' @param id.var see \code{\link{SDRsurv}}
+#' @param time.var see \code{\link{SDRsurv}}
+#' @param event.var see \code{\link{SDRsurv}}
+#' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
+#' @param option a list containing optional arguments passed to \code{\link[survivalmodels:deepsurv]{survivalmodels::akritas}}. We encourage using a named list. Will be passed to \code{\link[survivalmodels:akritas]{survivalmodels::akritas}} by running a command like `do.call(akritas, option)`. The user should not specify `formula`, `data` and `reverse`; `time_variable`, `status_variable`, `x`, `y` will be ignored.
+#' @param lambda bandwidth parameter for uniform smoothing kernel in nearest neighbours estimation. The default value of 0.5 is arbitrary and should be chosen by the user
+#' @param ... ignored
+#' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
+#' @export
+fit_akritas<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),lambda=0.5,...){
+    .requireNamespace("survivalmodels")
+    
+    #check if option is a list and whether it specifies formula and data
+    assert_that(is.list(option))
+    if(any(c("formula","data","reverse") %in% names(option))){
+        stop("option specifies formula, data or reverse")
+    }
+    
+    all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    if(nfold==1){
+        if(all(pull(data,.data[[event.var]])==0)){
+            fit_no_event(data,id.var)
+        }else{
+            arg<-c(
+                list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
+                option
+            )
+            model<-do.call(survivalmodels::akritas,arg)
+            surv<-predict(model,type="survival",lambda=lambda,distr6=FALSE)
+            time<-as.numeric(colnames(surv))
+            rownames(surv)<-pull(data,.data[[id.var]])
+            colnames(surv)<-NULL
+            pred_surv(time=time,surv=surv)
+        }
+    }else{
+        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        surv.list<-lapply(folds,function(fold){
+            if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
+                surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
+                rownames(surv)<-fold
+                surv
+            }else{
+                arg<-c(
+                    list(formula=formula,data=data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%select(!.data[[id.var]])), #remove id.var to allow for . in formula
+                    option
+                )
+                model<-do.call(survivalmodels::akritas,arg)
+                prediction<-predict(model,data%>%filter(.data[[id.var]] %in% .env$fold),type="survival",lambda=lambda,distr6=FALSE)
+                time<-as.numeric(colnames(prediction))
+                colnames(prediction)<-NULL
+                surv<-lapply(all.times,function(t){
+                    i<-find.first.TRUE.index(time<=t,noTRUE=0)
+                    if(i==0){
+                        out<-matrix(1,nrow=length(fold),ncol=1)
+                    }else{
+                        out<-prediction[,i]
                     }
                     out
                 })%>%do.call(what=cbind)

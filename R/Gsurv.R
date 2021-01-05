@@ -13,7 +13,7 @@
 #' @param event.var (character) name of the variable containing indicator of event/censoring in the data frame `follow.up.time`.
 #' @param event.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each check-in time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all check-in times, which includes main effects of all covariates available at each check-in time.
 #' @param Q.formula formula to specify covariates being used for estimating P(T <= t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `check.in.times[truncation.index]`.
-#' @param event.method one of `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`. The machine learning method to fit survival survival curves of time to event in each time window. Default is `"rfsrc`. See the underlying wrappers \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}} for the available options.
+#' @param event.method one of `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit survival survival curves of time to event in each time window. Default is `"rfsrc`. See the underlying wrappers \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for the available options.
 #' @param event.control a returned value from \code{\link{fit_surv_option}}
 #' @param Q.SuperLearner.control a list containing optional arguments passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} by running a command like `do.call(SuperLearner, Q.SuperLearner.control)`. Default is `list(SL.library="SL.lm")`, which uses linear regression. The user should not specify `Y`, `X` and `family`, and must specify `SL.library` if default is not used. When `Q.formula` only includes an intercept, \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} will not be called and the default setting can be used.
 #' @return a list of fitted `SuperLearner` models corresponding to each t in `tvals`. If `Q.formula` is empty, then return a list of numbers, each being estimated P(T <= t) for t in `tvals`.
@@ -31,7 +31,7 @@ Gsurv<-function(
     event.var,
     event.formula=NULL,
     Q.formula=~.,
-    event.method=c("rfsrc","ctree","rpart","cforest","coxph"),
+    event.method=c("rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
     event.control=fit_surv_option(),
     Q.SuperLearner.control=list(SL.library="SL.lm")
 ){
