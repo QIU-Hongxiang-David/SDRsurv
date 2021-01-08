@@ -12,12 +12,12 @@
         #will use j-1 to get Ghat(s-)
         #if no censoring time >= current event time, then set j to be the index after the last censoring time
         #if j=1 (all censoring time >= current event time), set Ghat(s-) to 1
-        j<-find.first.TRUE.index(pred_event_censor_obj$censoror$time>=pred_event_censor_obj$event$time[i],
-                                 noTRUE=length(pred_event_censor_obj$censoror$time)+1)
+        j<-find.first.TRUE.index(pred_event_censor_obj$censor$time>=pred_event_censor_obj$event$time[i],
+                                 noTRUE=length(pred_event_censor_obj$censor$time)+1)
         if(j==1){
             Ghat.minus[,i]<-1
         }else{
-            Ghat.minus[,i]<-pred_event_censor_obj$censoror$surv[,j-1]
+            Ghat.minus[,i]<-pred_event_censor_obj$censor$surv[,j-1]
         }
     }
     
