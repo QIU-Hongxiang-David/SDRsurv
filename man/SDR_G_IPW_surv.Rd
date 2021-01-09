@@ -24,7 +24,7 @@ SDR_G_IPW_surv(
   event.control = fit_surv_option(),
   censor.control = fit_surv_option(),
   Q.SuperLearner.control = list(SL.library = "SL.lm"),
-  denom.survival.trunc = 0.01
+  denom.survival.trunc = 0.001
 )
 }
 \arguments{

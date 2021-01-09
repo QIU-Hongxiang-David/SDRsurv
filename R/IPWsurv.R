@@ -37,7 +37,7 @@ IPWsurv<-function(
     censor.method=c("rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
     censor.control=fit_surv_option(),
     Q.SuperLearner.control=list(SL.library="SL.lm"),
-    denom.survival.trunc=1e-2
+    denom.survival.trunc=1e-3
 ){
     assert_that(is.string(id.var))
     assert_that(is.string(time.var))

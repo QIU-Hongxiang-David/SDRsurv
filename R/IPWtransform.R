@@ -68,7 +68,7 @@ IPWtransform<-function(
     id.var,
     time.var,
     event.var,
-    denom.survival.trunc=1e-2
+    denom.survival.trunc=1e-3
 ){
     #K is the last check.in.time that needs to be considered
     K<-find.last.TRUE.index(check.in.times<tail(tvals,1))

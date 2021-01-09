@@ -28,8 +28,8 @@
             integrand[,i]<-(1-pred_event_censor_obj$event$surv[,i])/pred_event_censor_obj$event$surv[,i]/pmax(Ghat.minus[,i],denom.survival.trunc)
         }else{
             integrand[,i]<-(pred_event_censor_obj$event$surv[,i-1]-pred_event_censor_obj$event$surv[,i])/
-                pmax(pred_event_censor_obj$event$surv[,i],denom.survival.trunc)/
-                pmax(pred_event_censor_obj$event$surv[,i-1],denom.survival.trunc)/
+                pred_event_censor_obj$event$surv[,i]/
+                pred_event_censor_obj$event$surv[,i-1]/
                 pmax(Ghat.minus[,i],denom.survival.trunc)
         }
     }
@@ -92,7 +92,10 @@
                     integral.Xt<-integral[i,k.int]
                 }
                 
-                output[i,j]<-1-Shat.t+Shat.t*(IPW.term-integral.Xt)
+                output[i,j]<-1-Shat.t
+                if(Shat.t!=1){
+                    output[i,j]<-output[i,j]+Shat.t*(IPW.term-integral.Xt)
+                }
             }
         }
     }
@@ -126,7 +129,7 @@ SDRtransform<-function(
     id.var,
     time.var,
     event.var,
-    denom.survival.trunc=1e-2
+    denom.survival.trunc=1e-3
 ){
     #K is the last check.in.time that needs to be considered
     K<-find.last.TRUE.index(check.in.times<tail(tvals,1))

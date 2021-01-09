@@ -13,7 +13,7 @@ SDRtransform(
   id.var,
   time.var,
   event.var,
-  denom.survival.trunc = 0.01
+  denom.survival.trunc = 0.001
 )
 }
 \arguments{
