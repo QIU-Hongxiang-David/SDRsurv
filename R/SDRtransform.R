@@ -78,8 +78,8 @@
                     }else{
                         Ghat.Xminus<-pred_event_censor_obj$censor$surv[i,k.GX-1]
                     }
-
-                    IPW.term<-1/pmax(Shat.X,denom.survival.trunc)/pmax(Ghat.Xminus,denom.survival.trunc)
+                    
+                    IPW.term<-1/Shat.X/pmax(Ghat.Xminus,denom.survival.trunc)
                 }else{
                     IPW.term<-0
                 }
@@ -93,7 +93,7 @@
                 }
                 
                 output[i,j]<-1-Shat.t
-                if(Shat.t!=1){
+                if(Shat.t!=0){
                     output[i,j]<-output[i,j]+Shat.t*(IPW.term-integral.Xt)
                 }
             }
