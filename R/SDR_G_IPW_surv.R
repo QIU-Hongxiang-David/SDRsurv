@@ -1,27 +1,26 @@
 #' @title Estimate (conditional) survival probabilities with all three methods based on sequentially doubly robust, G-computation and inverse probability weighting (IPW) transformations
 #' @name SDR_G_IPW_surv
 #' @description
-#' Estimate P(T <= t | T > truncation time, covariates available at truncation time) for given t, where T is the time to event, using all three methods based on sequentially doubly robust, G-computation and inverse probability weighting (IPW) transformations. Use a user-specified flexible method to fit survival curves of time to event/censoring at each stage and then use \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} to regress pseudo-outcome on covariates in order to estimate P(T <= t | T > truncation time, covariates available at truncation time). This function is faster than running \code{\link{SDRsurv}}, \code{\link{Gsurv}} and \code{\link{IPWsurv}} separately as the survival curves are fitted only once.
+#' Estimate P(T > t | T > truncation time, covariates available at truncation time) for given t, where T is the time to event, using all three methods based on sequentially doubly robust, G-computation and inverse probability weighting (IPW) transformations. Use a user-specified flexible method to fit survival curves of time to event/censoring at each stage and then use \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} to regress pseudo-outcome on covariates in order to estimate P(T > t | T > truncation time, covariates available at truncation time). This function is faster than running \code{\link{SDRsurv}}, \code{\link{Gsurv}} and \code{\link{IPWsurv}} separately as the survival curves are fitted only once.
 #'
 #' @param covariates a list of data frames of covarates in the order of check in times. Each data frame contains the covariates collected at a check-in time. Data frames may have different numbers of variables (may collect different variables at different check-in times) and different numbers of individuals (some individuals may have an event or is censored before a later check-in time). All data frames must have a common character variable (see `id.var`) that identifies each individual but no other variables with common names. No missing data is allowed.
 #' @param follow.up.time data frame of follow up times, i.e., times to event/censoring. Contains the variable that identifies each individual, the follow up times and an indicator of event/(right-)censoring. Follow up times must be numeric. Indicator of event/censoring should be binary with 0=censored, 1=event.
 #' @param check.in.times numeric/integer vector of check-in times in ascending order. The first check-in time is typically the baseline.
-#' @param tvals times t for which P(T <= t) given covariates are computed (T is the time to event). Default is all unique event times in `follow.up.time`. Will be sorted in ascending order.
+#' @param tvals times t for which P(T > t) given covariates are computed (T is the time to event). Default is all unique event times in `follow.up.time`. Will be sorted in ascending order.
 #' @param truncation.index index of the check-in time to which left-truncation is applied. The truncation time is `check.in.times[truncation.index]`. Covariates available up to (inclusive) `check.in.times[truncation.index]` are of interest. Default is 1, corresponding to no truncation.
 #' @param id.var (character) name of the variable that identifies each individual.
 #' @param time.var (character) name of the variable containing follow up times in the data frame `follow.up.time`.
 #' @param event.var (character) name of the variable containing indicator of event/censoring in the data frame `follow.up.time`.
 #' @param event.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each check-in time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all check-in times, which includes main effects of all covariates available at each check-in time.
 #' @param censor.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each check-in time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all check-in times, which includes main effects of all covariates available at each check-in time.
-#' @param Q.formula formula to specify covariates being used for estimating P(T <= t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `check.in.times[truncation.index]`.
-#' @param est.cdf whether to estimate (conditional) CDF or survival function. Default is `TRUE`. Set to `FALSE` to estimate the survival function.
+#' @param Q.formula formula to specify covariates being used for estimating P(T > t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `check.in.times[truncation.index]`.
 #' @param event.method one of `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit survival survival curves of time to event in each time window. Default is `"rfsrc`. See the underlying wrappers \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for the available options.
 #' @param censor.method one of `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit survival survival curves of time to censoring in each time window. Similar to `event.method`.
 #' @param event.control a returned value from \code{\link{fit_surv_option}}
 #' @param censor.control a returned value from \code{\link{fit_surv_option}}
-#' @param Q.SuperLearner.control a list containing optional arguments passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} by running a command like `do.call(SuperLearner, Q.SuperLearner.control)`. Default is `list(SL.library="SL.lm")`, which uses linear regression. The user should not specify `Y`, `X` and `family`, and must specify `SL.library` if default is not used. When `Q.formula` only includes an intercept, \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} will not be called and the default setting can be used.
+#' @param Q.SuperLearner.control a list containing optional arguments passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} by running a command like `do.call(SuperLearner, Q.SuperLearner.control)`. Default is `list(SL.library="SL.lm")`, which uses linear regression. The user should not specify `Y` and `X`, and must specify `SL.library` if default is not used. If `family` is gaussian by default if unspecified, and must be gaussian if specified, with a possibly non-identity link. When `Q.formula` only includes an intercept, \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} will not be called and the default setting can be used.
 #' @param denom.survival.trunc the numeric truncation value for the denominator. All denominators below `denom.survival.trunc` will be set to `denom.survival.trunc` for numerical stability.
-#' @return a list containing three lists of fitted `SuperLearner` models corresponding to each t in `tvals`. The three elements correspond to SDR, G-computation and IPW, respectively. If `Q.formula` is empty, then return a list of numbers, each being estimated P(T <= t) for t in `tvals`.
+#' @return a list containing three lists of fitted `SuperLearner` models corresponding to each t in `tvals`. The three elements correspond to SDR, G-computation and IPW, respectively.
 #' @section Formula arguments:
 #' All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., `~ V1 + V2 + V3`. At each check-in time, the corresponding formulas may (and usually should) contain covariates at previous check-in times, and must only include available covariates up to (inclusive) that check-in time. Interactions, polynomials and splines may be treated differently by different machine learning methods to estimate conditional survival curves.
 #' @export
@@ -37,12 +36,11 @@ SDR_G_IPW_surv<-function(
     event.formula=NULL,
     censor.formula=NULL,
     Q.formula=~.,
-    est.cdf=TRUE,
     event.method=c("rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
     censor.method=c("rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
     event.control=fit_surv_option(),
     censor.control=fit_surv_option(),
-    Q.SuperLearner.control=list(SL.library="SL.lm"),
+    Q.SuperLearner.control=list(family=gaussian(),SL.library="SL.lm"),
     denom.survival.trunc=1e-3
 ){
     assert_that(is.string(id.var))
@@ -136,6 +134,9 @@ SDR_G_IPW_surv<-function(
     
     #check if truncation.index is valid
     assert_that(is.count(truncation.index),truncation.index<=K)
+    if(!all(tvals>check.in.times[truncation.index])){
+        stop("At least one value in tvals is earlier than the left-truncation time")
+    }
     
     #check monotone missing of individuals
     if(K>1){
@@ -197,7 +198,7 @@ SDR_G_IPW_surv<-function(
     
     #check if variables in Q.formula are all available at truncation time
     Q.covars<-setdiff(all.vars(Q.formula),".")
-    history.covars<-setdiff(do.call(c,lapply(covariates[[1:truncation.index]],names)),id.var)
+    history.covars<-setdiff(do.call(c,lapply(covariates[1:truncation.index],names)),id.var)
     if(!all(Q.covars %in% history.covars)){
         stop("Q.formula contains covariates not available up to truncation time")
     }
@@ -210,11 +211,27 @@ SDR_G_IPW_surv<-function(
         stop("censor.control is not a fit_surv_option object")
     }
     
-    #check if Q.SuperLearner.control is a list and whether it specifies Y, X or family
+    #check if Q.SuperLearner.control is a list and whether it specifies Y or X
     assert_that(is.list(Q.SuperLearner.control))
-    if(any(c("Y","X","family") %in% names(Q.SuperLearner.control))){
-        stop("Q.SuperLearner.control should not not specify Y, X or family")
+    if(any(c("Y","X") %in% names(Q.SuperLearner.control))){
+        stop("Q.SuperLearner.control should not not specify Y or X")
     }
+    
+    if(!("family" %in% names(Q.SuperLearner.control))){
+        Q.SuperLearner.control$family<-gaussian()
+    }
+    if(is.character(Q.SuperLearner.control$family)){
+        if(Q.SuperLearner.control$family!="gaussian"){
+            stop("Q.SuperLearner.control$family must be gaussian")
+        }
+    }else if(is.function(Q.SuperLearner.control$family)){
+        if(!all.equal(Q.SuperLearner.control$family,gaussian)){
+            stop("Q.SuperLearner.control$family must be gaussian")
+        }
+    }else if(Q.SuperLearner.control$family$family!="gaussian"){
+        stop("Q.SuperLearner.control$family must be gaussian")
+    }
+    
     if(!("SL.library" %in% names(Q.SuperLearner.control))){
         stop("Q.SuperLearner.control should specify SL.library")
     }
@@ -234,10 +251,16 @@ SDR_G_IPW_surv<-function(
         
         if(k<length(check.in.times)){
             event.follow.up.time<-admin.censor(follow.up.time,time.var,event.var,check.in.times[k+1])
-            censor.follow.up.time<-admin.censor(follow.up.time%>%mutate("{event.var}":=1-.data[[event.var]]),time.var,event.var,check.in.times[k+1])
+            censor.follow.up.time<-admin.censor(
+                follow.up.time%>%
+                    mutate("{event.var}":=1-.data[[event.var]],
+                           "{time.var}":=left.shift.censoring(.data[[time.var]],.data[[event.var]])),
+                time.var,event.var,check.in.times[k+1])
         }else{
             event.follow.up.time<-follow.up.time
-            censor.follow.up.time<-follow.up.time%>%mutate("{event.var}":=1-.data[[event.var]])
+            censor.follow.up.time<-follow.up.time%>%
+                mutate("{event.var}":=1-.data[[event.var]],
+                       "{time.var}":=left.shift.censoring(.data[[time.var]],.data[[event.var]]))
         }
         
         #fit event
@@ -268,17 +291,10 @@ SDR_G_IPW_surv<-function(
     })
     
     ############################################################################
-    # transformations (create a nested list: tvals > check.in.times)
+    # transformations and regression
     ############################################################################
-    SDR.stagewise.pseudo.outcomes<-SDRtransform(follow.up.time,pred_event_censor.list,check.in.times,tvals,truncation.index,id.var,time.var,event.var)
-    G.stagewise.pseudo.outcomes<-Gtransform(follow.up.time,lapply(pred_event_censor.list,function(x) x$event),check.in.times,tvals,truncation.index,id.var,time.var,event.var)
-    IPW.stagewise.pseudo.outcomes<-IPWtransform(follow.up.time,lapply(pred_event_censor.list,function(x) x$censor),check.in.times,tvals,truncation.index,id.var,time.var,event.var)
-     
-    ############################################################################
-    # run regular regression (run through each tvals)
-    ############################################################################
-    SDR.output<-estQ.SuperLearner(covariates,SDR.stagewise.pseudo.outcomes,truncation.index,id.var,Q.formula,est.cdf,Q.SuperLearner.control)
-    G.output<-estQ.SuperLearner(covariates,G.stagewise.pseudo.outcomes,truncation.index,id.var,Q.formula,est.cdf,Q.SuperLearner.control)
-    IPW.output<-estQ.SuperLearner(covariates,IPW.stagewise.pseudo.outcomes,truncation.index,id.var,Q.formula,est.cdf,Q.SuperLearner.control)
+    SDR.output<-SDRreg.SuperLearner(covariates,follow.up.time,pred_event_censor.list,check.in.times,tvals,truncation.index,id.var,time.var,event.var,Q.formula,Q.SuperLearner.control,denom.survival.trunc)
+    G.output<-Greg.SuperLearner(covariates,follow.up.time,lapply(pred_event_censor.list,function(x) x$event),check.in.times,tvals,truncation.index,id.var,time.var,event.var,Q.formula,Q.SuperLearner.control)
+    IPW.output<-IPWreg.SuperLearner(covariates,follow.up.time,lapply(pred_event_censor.list,function(x) x$censor),check.in.times,tvals,truncation.index,id.var,time.var,event.var,Q.formula,Q.SuperLearner.control,denom.survival.trunc)
     list(SDR=SDR.output,G=G.output,IPW=IPW.output)
 }

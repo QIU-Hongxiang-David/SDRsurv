@@ -87,3 +87,14 @@ as.matrix.rowvec<-function(x){
         )
     }
 }
+
+
+#shift censoring time to the left a tiny bit
+#used for survival analysis with event observed iff T<C (rather than traditionally T<=C)
+#status: 1 if observed event; 0 if censoring
+left.shift.censoring<-function(time,status){
+    epsilon<-time%>%unique%>%sort%>%diff%>%min
+    epsilon<-epsilon*.5
+    time[status==0]<-time[status==0]-epsilon
+    time
+}

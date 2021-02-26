@@ -15,5 +15,5 @@ truncate_pred_surv(pred_surv_obj, end = Inf)
 A \code{pred_surv} object with truncated times.
 }
 \description{
-Truncate the time and survival probabilities in a \code{pred_surv} object to minimal so that predicted/fitted survival probability at \code{end} is kept. This function can be used before applying transformations (e.g., \code{\link{SDRtransform}}, \code{\link{Gtransform}}, \code{\link{IPWtransform}}) to avoid unnecessary computation. No truncation is applied if \code{end} is greater than or equal to the last time in the \code{pred_surv} object.
+Truncate the time and survival probabilities in a \code{pred_surv} object to minimal so that predicted/fitted survival probability at \code{end} is kept. This function can be used before applying transformations (e.g., \code{\link{DRtransform}}, \code{\link{Gtransform}}, \code{\link{IPWtransform}}) to avoid unnecessary computation. No truncation is applied if \code{end} is greater than or equal to the last time in the \code{pred_surv} object.
 }

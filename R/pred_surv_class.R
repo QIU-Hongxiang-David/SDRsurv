@@ -53,7 +53,7 @@ pred_event_censor<-function(pred_event_obj,pred_censor_obj=NULL){
 
 #' @title Truncate `pred_surv` object to minimal that covers a time window
 #' @name truncate_pred_surv
-#' @description Truncate the time and survival probabilities in a `pred_surv` object to minimal so that predicted/fitted survival probability at `end` is kept. This function can be used before applying transformations (e.g., \code{\link{SDRtransform}}, \code{\link{Gtransform}}, \code{\link{IPWtransform}}) to avoid unnecessary computation. No truncation is applied if `end` is greater than or equal to the last time in the `pred_surv` object.
+#' @description Truncate the time and survival probabilities in a `pred_surv` object to minimal so that predicted/fitted survival probability at `end` is kept. This function can be used before applying transformations (e.g., \code{\link{DRtransform}}, \code{\link{Gtransform}}, \code{\link{IPWtransform}}) to avoid unnecessary computation. No truncation is applied if `end` is greater than or equal to the last time in the `pred_surv` object.
 #' @param pred_surv_obj `pred_surv` object.
 #' @param end ending point (inclusive) of at which truncation applies. Default is `Inf`.
 #' @return A `pred_surv` object with truncated times.
@@ -72,7 +72,7 @@ truncate_pred_surv<-function(pred_surv_obj,end=Inf){
 
 #' @title Truncate `pred_event_censor` object to minimal that covers a time window
 #' @name truncate_pred_event_censor
-#' @description Truncate the time and survival probabilities in a `pred_event_censor` object to minimal so that predicted/fitted survival and censoring probabilities at `end` are kept. This function can be used before applying transformations (e.g., \code{\link{SDRtransform}}, \code{\link{Gtransform}}, \code{\link{IPWtransform}}) to avoid unnecessary computation. No truncation is applied if `end` is greater than or equal to the last time in the `pred_event_censor` object.
+#' @description Truncate the time and survival probabilities in a `pred_event_censor` object to minimal so that predicted/fitted survival and censoring probabilities at `end` are kept. This function can be used before applying transformations (e.g., \code{\link{DRtransform}}, \code{\link{Gtransform}}, \code{\link{IPWtransform}}) to avoid unnecessary computation. No truncation is applied if `end` is greater than or equal to the last time in the `pred_event_censor` object.
 #' @param pred_event_censor_obj `pred_event_censor` object.
 #' @param end ending point (inclusive) of at which truncation applies. Default is `Inf`.
 #' @return A `pred_event_censor` object with truncated times.

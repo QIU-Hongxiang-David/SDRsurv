@@ -15,5 +15,5 @@ truncate_pred_event_censor(pred_event_censor_obj, end = Inf)
 A \code{pred_event_censor} object with truncated times.
 }
 \description{
-Truncate the time and survival probabilities in a \code{pred_event_censor} object to minimal so that predicted/fitted survival and censoring probabilities at \code{end} are kept. This function can be used before applying transformations (e.g., \code{\link{SDRtransform}}, \code{\link{Gtransform}}, \code{\link{IPWtransform}}) to avoid unnecessary computation. No truncation is applied if \code{end} is greater than or equal to the last time in the \code{pred_event_censor} object.
+Truncate the time and survival probabilities in a \code{pred_event_censor} object to minimal so that predicted/fitted survival and censoring probabilities at \code{end} are kept. This function can be used before applying transformations (e.g., \code{\link{DRtransform}}, \code{\link{Gtransform}}, \code{\link{IPWtransform}}) to avoid unnecessary computation. No truncation is applied if \code{end} is greater than or equal to the last time in the \code{pred_event_censor} object.
 }
