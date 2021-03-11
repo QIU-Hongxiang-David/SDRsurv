@@ -28,7 +28,7 @@ fit_dnnsurv(
 
 \item{nfold}{number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting}
 
-\item{option}{a list containing optional arguments passed to \code{\link[survivalmodels:deepsurv]{survivalmodels::dnnsurv}}. We encourage using a named list. Will be passed to \code{\link[survivalmodels:dnnsurv]{survivalmodels::dnnsurv}} by running a command like \code{do.call(dnnsurv, option)}. The user should not specify \code{formula}, \code{data} and \code{reverse}; \code{time_variable}, \code{status_variable}, \code{x}, \code{y} will be ignored.}
+\item{option}{a list containing optional arguments passed to \code{\link[survivalmodels:dnnsurv]{survivalmodels::dnnsurv}}. We encourage using a named list. Will be passed to \code{\link[survivalmodels:dnnsurv]{survivalmodels::dnnsurv}} by running a command like \code{do.call(dnnsurv, option)}. The user should not specify \code{formula}, \code{data} and \code{reverse}; \code{time_variable}, \code{status_variable}, \code{x}, \code{y} will be ignored.}
 
 \item{...}{ignored}
 }

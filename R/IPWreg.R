@@ -90,7 +90,7 @@ IPWreg.SuperLearner<-function(
     Q.SuperLearner.control=list(family=gaussian(),SL.library="SL.lm"),
     denom.survival.trunc=1e-3
 ){
-    assert_that(denom.survival.trunc>0,denom.survival.trunc<=1)
+    assert_that(denom.survival.trunc>=0,denom.survival.trunc<=1)
     
     #check if Q.SuperLearner.control is a list and whether it specifies Y or X
     assert_that(is.list(Q.SuperLearner.control))

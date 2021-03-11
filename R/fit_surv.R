@@ -650,7 +650,7 @@ fit_deepsurv<-function(formula,data,id.var,time.var,event.var,nfold=1,option=lis
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to \code{\link[survivalmodels:deepsurv]{survivalmodels::dnnsurv}}. We encourage using a named list. Will be passed to \code{\link[survivalmodels:dnnsurv]{survivalmodels::dnnsurv}} by running a command like `do.call(dnnsurv, option)`. The user should not specify `formula`, `data` and `reverse`; `time_variable`, `status_variable`, `x`, `y` will be ignored.
+#' @param option a list containing optional arguments passed to \code{\link[survivalmodels:dnnsurv]{survivalmodels::dnnsurv}}. We encourage using a named list. Will be passed to \code{\link[survivalmodels:dnnsurv]{survivalmodels::dnnsurv}} by running a command like `do.call(dnnsurv, option)`. The user should not specify `formula`, `data` and `reverse`; `time_variable`, `status_variable`, `x`, `y` will be ignored.
 #' @param ... ignored
 #' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
 #' @export
