@@ -79,5 +79,5 @@ truncate_pred_surv<-function(pred_surv_obj,end=Inf){
 #' @export
 truncate_pred_event_censor<-function(pred_event_censor_obj,end=Inf){
     pred_event_censor(truncate_pred_surv(pred_event_censor_obj$event,end),
-                   truncate_pred_surv(pred_event_censor_obj$censor,end))
+                      truncate_pred_surv(pred_event_censor_obj$censor,end))
 }

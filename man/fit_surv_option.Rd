@@ -16,7 +16,7 @@ fit_surv_option(
 \arguments{
 \item{nfold}{number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting}
 
-\item{option}{a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like \code{do.call(machine.learning, option)}. \code{formula} and \code{data} should not be specified. For \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, if \code{tune=TRUE}, then \code{mtry} and \code{nodesize} should not be specified either.}
+\item{option}{a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like \code{do.call(machine.learning, option)} where \code{machine.learning} is the machine learning function being called. \code{formula} and \code{data} should not be specified. For \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, if \code{tune=TRUE}, then \code{mtry} and \code{nodesize} should not be specified either.}
 
 \item{oob}{whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} and \code{\link[party:cforest]{party::cforest}}) when sample splitting is not used (\code{nfold=1}). Ignored otherwise.}
 

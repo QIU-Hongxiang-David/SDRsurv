@@ -16,12 +16,15 @@ SDRsurv(
   event.formula = NULL,
   censor.formula = NULL,
   Q.formula = ~.,
-  event.method = c("rfsrc", "ctree", "rpart", "cforest", "coxph", "coxtime",
-    "deepsurv", "dnnsurv", "akritas"),
-  censor.method = c("rfsrc", "ctree", "rpart", "cforest", "coxph", "coxtime",
-    "deepsurv", "dnnsurv", "akritas"),
+  event.method = c("survSuperLearner", "rfsrc", "ctree", "rpart", "cforest", "coxph",
+    "coxtime", "deepsurv", "dnnsurv", "akritas"),
+  censor.method = c("survSuperLearner", "rfsrc", "ctree", "rpart", "cforest", "coxph",
+    "coxtime", "deepsurv", "dnnsurv", "akritas"),
   event.control = fit_surv_option(),
   censor.control = fit_surv_option(),
+  survSuperLearner.control = fit_surv_option(option = list(event.SL.library =
+    c("survSL.coxph", "survSL.weibreg", "survSL.gam", "survSL.rfsrc"), cens.SL.library =
+    c("survSL.coxph", "survSL.weibreg", "survSL.gam", "survSL.rfsrc"))),
   Q.SuperLearner.control = list(family = gaussian(), SL.library = "SL.lm"),
   denom.survival.trunc = 0.001
 )
@@ -45,17 +48,19 @@ SDRsurv(
 
 \item{event.formula}{a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each check-in time. The length should be the number of check in times after \code{truncation.index} (inclusive). Default is \code{~ .} for all check-in times, which includes main effects of all covariates available at each check-in time.}
 
-\item{censor.formula}{a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each check-in time. Similar to \code{event.formula}}
+\item{censor.formula}{a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each check-in time. Similar to \code{event.formula}. If \code{event.method} is chosen as \code{"survSuperLearner"}, \code{censor.formula} is not used and \code{event.formula} is used instead.}
 
 \item{Q.formula}{formula to specify covariates being used for estimating P(T > t | T > \code{check.in.times[truncation.index]}, covariates available at \code{check.in.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{check.in.times[truncation.index]}.}
 
-\item{event.method}{one of \code{"rfsrc"}, \code{"ctree"}, \code{"rpart"}, \code{"cforest"}, \code{"coxph"}, \code{"coxtime"}, \code{"deepsurv"}, \code{"dnnsurv"}, \code{"akritas"}. The machine learning method to fit survival survival curves of time to event in each time window. Default is \verb{"rfsrc}. See the underlying wrappers \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for the available options.}
+\item{event.method}{one of \code{"survSuperLearner"}, \code{"rfsrc"}, \code{"ctree"}, \code{"rpart"}, \code{"cforest"}, \code{"coxph"}, \code{"coxtime"}, \code{"deepsurv"}, \code{"dnnsurv"}, \code{"akritas"}. The machine learning method to fit  survival curves of time to event in each time window. See the underlying wrappers \code{\link{fit_survSuperLearner}}, \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for more details and the available options. Default is \code{"survSuperLearner"}, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window. If at least one of \code{event.method} and \code{censor.method} is \code{"survSuperLearner"}, then survival curves of both time to event and time to censoring are fitted by \code{\link{fit_survSuperLearner}}.}
 
-\item{censor.method}{one of \code{"rfsrc"}, \code{"ctree"}, \code{"rpart"}, \code{"cforest"}, \code{"coxph"}, \code{"coxtime"}, \code{"deepsurv"}, \code{"dnnsurv"}, \code{"akritas"}. The machine learning method to fit survival survival curves of time to censoring in each time window. Similar to \code{event.method}.}
+\item{censor.method}{one of \code{"survSuperLearner"}, \code{"rfsrc"}, \code{"ctree"}, \code{"rpart"}, \code{"cforest"}, \code{"coxph"}, \code{"coxtime"}, \code{"deepsurv"}, \code{"dnnsurv"}, \code{"akritas"}. The machine learning method to fit survival survival curves of time to censoring in each time window. Similar to \code{event.method}. Default is \code{"survSuperLearner"}, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window. If at least one of \code{event.method} and \code{censor.method} is \code{"survSuperLearner"}, then survival curves of both time to event and time to censoring are fitted by \code{\link{fit_survSuperLearner}}.}
 
-\item{event.control}{a returned value from \code{\link{fit_surv_option}}}
+\item{event.control}{a returned value from \code{\link{fit_surv_option}} to control fitting survival curves of time to event. Ignored if \code{event.method} is chosen as \code{"survSuperLearner"}.}
 
-\item{censor.control}{a returned value from \code{\link{fit_surv_option}}}
+\item{censor.control}{a returned value from \code{\link{fit_surv_option}} to control fitting survival curves of time to censoring. Ignored if \code{event.method} is chosen as \code{"survSuperLearner"}.}
+
+\item{survSuperLearner.control}{a returned value from \code{\link{fit_surv_option}} to control fitting survival curves of time to event/censoring if \code{event.method} is chosen as \code{"survSuperLearner"}; ignored otherwise. Default specifies the library for both event and censoring to be \code{c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc")}.}
 
 \item{Q.SuperLearner.control}{a list containing optional arguments passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} by running a command like \code{do.call(SuperLearner, Q.SuperLearner.control)}. Default is \code{list(SL.library="SL.lm")}, which uses linear regression. The user should not specify \code{Y} and \code{X}, and must specify \code{SL.library} if default is not used. If \code{family} is gaussian by default if unspecified, and must be gaussian if specified, with a possibly non-identity link. When \code{Q.formula} only includes an intercept, \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} will not be called and the default setting can be used.}
 

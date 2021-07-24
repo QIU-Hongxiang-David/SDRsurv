@@ -1,7 +1,7 @@
 #' @title Options of machine learning methods' wrappers for fitting conditional survival curves
 #' @name fit_surv_option
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like `do.call(machine.learning, option)`. `formula` and `data` should not be specified. For \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, if `tune=TRUE`, then `mtry` and `nodesize` should not be specified either.
+#' @param option a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like `do.call(machine.learning, option)` where `machine.learning` is the machine learning function being called. `formula` and `data` should not be specified. For \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, if `tune=TRUE`, then `mtry` and `nodesize` should not be specified either.
 #' @param oob whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} and \code{\link[party:cforest]{party::cforest}}) when sample splitting is not used (`nfold=1`). Ignored otherwise.
 #' @param tune whether to tune `mtry` and `nodesize` for \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}. Ignored for other methods.
 #' @param tune.option a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{randomForestSRC::tune.rfsrc}} if \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} is used and `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
@@ -17,9 +17,11 @@ fit_surv_option<-function(nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=l
     out
 }
 
-fit_surv<-function(method=c("rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),...){
+fit_surv<-function(method=c("survSuperLearner","rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),...){
     method<-match.arg(method)
-    if(method=="rfsrc"){
+    if(method=="survSuperLearner"){
+        fit_survSuperLearner(...)
+    }else if(method=="rfsrc"){
         fit_rfsrc(...)
     }else if(method=="ctree"){
         fit_ctree(...)
@@ -46,6 +48,85 @@ fit_no_event<-function(data,id.var){
     rownames(surv)<-pull(data,.data[[id.var]])
     pred_surv(Inf,surv)
 }
+
+
+#' @title Wrapper of `survSuperLearner::survSuperLearner`
+#' @name fit_survSuperLearner
+#' @param formula formula containing all covariates to be used
+#' @param data data containing all covariates, follow-up time, event indicator and id
+#' @param id.var see \code{\link{SDRsurv}}
+#' @param time.var see \code{\link{SDRsurv}}
+#' @param event.var see \code{\link{SDRsurv}}
+#' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
+#' @param option a list containing optional arguments passed to \code{\link[survSuperLearner:survSuperLearner]{survSuperLearner::survSuperLearner}}. We encourage using a named list. Will be passed to \code{\link[survSuperLearner:survSuperLearner]{survSuperLearner::survSuperLearner}} by running a command like `do.call(survSuperLearner, option)`. The user should not specify `time`, `event`, `X`, `newX` or `new.times`. We encourage the user to specify `event.SL.library` and `cens.SL.library`.
+#' @param ... ignored
+#' @return a \code{\link{pred_event_censor}} class containing fitted survival curves for individuals in `data`
+#' @export
+fit_survSuperLearner<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(event.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc"),cens.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc")),...){
+    .requireNamespace("survSuperLearner")
+    
+    #check if option is a list and whether it specifies formula and data
+    assert_that(is.list(option))
+    if(any(c("time","event","X","newX","new.times") %in% names(option))){
+        stop("option specifies time, event, X, newX or new.times")
+    }
+    
+    if(nfold==1){
+        time<-data%>%pull(time.var)
+        event<-data%>%pull(event.var)
+        newX<-X<-model.frame(formula,data=data%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
+        new.times<-sort(unique(time))
+        
+        arg<-c(list(time=time,event=event,X=X,newX=newX,new.times=new.times),option)
+        model<-do.call(survSuperLearner::survSuperLearner,arg)
+        
+        event.pred<-model$event.SL.predict
+        row.names(event.pred)<-data%>%pull(id.var)
+        
+        censor.pred<-model$cens.SL.predict
+        row.names(censor.pred)<-data%>%pull(id.var)
+        pred_event_censor(pred_surv(time=new.times,surv=event.pred),
+                          pred_surv(time=new.times,surv=censor.pred))
+    }else{
+        all.times<-data%>%pull(.data[[time.var]])%>%unique%>%sort
+        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        
+        pred_event_censor.list<-lapply(folds,function(fold){
+            d<-data%>%filter(!(.data[[id.var]] %in% .env$fold))
+            test.d<-data%>%filter(.data[[id.var]] %in% .env$fold)
+            
+            time<-d%>%pull(time.var)
+            event<-d%>%pull(event.var)
+            X<-model.frame(formula,data=d%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
+            newX<-model.frame(formula,data=test.d%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
+            new.times<-all.times
+            
+            arg<-c(list(time=time,event=event,X=X,newX=newX,new.times=new.times),option)
+            model<-do.call(survSuperLearner::survSuperLearner,arg)
+            
+            event.pred<-model$event.SL.predict
+            row.names(event.pred)<-fold
+            
+            censor.pred<-model$cens.SL.predict
+            row.names(censor.pred)<-fold
+            
+            pred_event_censor(pred_surv(all.times,event.pred),pred_surv(all.times,censor.pred))
+        })
+        
+        event.pred<-lapply(pred_event_censor.list,function(x){
+            x$event$surv
+        })%>%do.call(what=rbind)
+        event.pred<-event.pred[order(rownames(event.pred)),,drop=FALSE]
+        
+        censor.pred<-lapply(pred_event_censor.list,function(x){
+            x$censor$surv
+        })%>%do.call(what=rbind)
+        censor.pred<-censor.pred[order(rownames(censor.pred)),,drop=FALSE]
+        
+        pred_event_censor(pred_surv(all.times,event.pred),pred_surv(all.times,censor.pred))
+    }
+}
+
 
 #' @title Wrapper of `randomForestSRC::rfsrc`
 #' @name fit_rfsrc

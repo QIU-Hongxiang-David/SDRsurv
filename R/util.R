@@ -1,6 +1,5 @@
 #copy of .SL.require
-.requireNamespace<-function (package, message = paste("loading required package (", 
-                                   package, ") failed", sep = "")) 
+.requireNamespace<-function (package, message = paste("loading required package (", package, ") failed", sep = "")) 
 {
     if (!requireNamespace(package, quietly = FALSE)) {
         stop(message, call. = FALSE)
@@ -94,7 +93,7 @@ as.matrix.rowvec<-function(x){
 #status: 1 if observed event; 0 if censoring
 left.shift.censoring<-function(time,status){
     epsilon<-time%>%unique%>%sort%>%diff%>%min
-    epsilon<-epsilon*.5
+    epsilon<-max(epsilon*.5,1e-5)
     time[status==0]<-time[status==0]-epsilon
     time
 }

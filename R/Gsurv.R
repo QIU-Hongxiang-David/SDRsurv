@@ -13,8 +13,8 @@
 #' @param event.var (character) name of the variable containing indicator of event/censoring in the data frame `follow.up.time`.
 #' @param event.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each check-in time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all check-in times, which includes main effects of all covariates available at each check-in time.
 #' @param Q.formula formula to specify covariates being used for estimating P(T > t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `check.in.times[truncation.index]`.
-#' @param event.method one of `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit survival survival curves of time to event in each time window. Default is `"rfsrc`. See the underlying wrappers \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for the available options.
-#' @param event.control a returned value from \code{\link{fit_surv_option}}
+#' @param event.method one of `"survSuperLearner"`, `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit  survival curves of time to event in each time window. See the underlying wrappers \code{\link{fit_survSuperLearner}}, \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for more details and the available options. Default is `"survSuperLearner"`, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window.
+#' @param event.control a returned value from \code{\link{fit_surv_option}}. For `event.method="survSuperLearner"`, default is setting library for both event and censoring to be `c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc")`.
 #' @param Q.SuperLearner.control a list containing optional arguments passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} by running a command like `do.call(SuperLearner, Q.SuperLearner.control)`. Default is `list(SL.library="SL.lm")`, which uses linear regression. The user should not specify `Y` and `X`, and must specify `SL.library` if default is not used. If `family` is gaussian by default if unspecified, and must be gaussian if specified, with a possibly non-identity link. When `Q.formula` only includes an intercept, \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} will not be called and the default setting can be used.
 #' @return a list of fitted `SuperLearner` models corresponding to each t in `tvals`.
 #' @section Formula arguments:
@@ -31,8 +31,14 @@ Gsurv<-function(
     event.var,
     event.formula=NULL,
     Q.formula=~.,
-    event.method=c("rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
-    event.control=fit_surv_option(),
+    event.method=c("survSuperLearner","rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
+    event.control=if(event.method!="survSuperLearner"){
+        fit_surv_option()
+    }else{
+        fit_surv_option(
+            option=list(event.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc"),
+                        cens.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc")))
+    },
     Q.SuperLearner.control=list(family=gaussian(),SL.library="SL.lm")
 ){
     assert_that(is.string(id.var))
@@ -234,14 +240,26 @@ Gsurv<-function(
         }
         
         event.surv.data<-left_join(history,event.follow.up.time,by=id.var)
-        form<-as.formula(paste("Surv(",time.var,",",event.var,")",
-                               paste(as.character(event.formula[[k-index.shift]]),collapse=""),
-                               collapse=""))
-        fit_surv_arg<-c(
-            list(method=event.method,formula=form,data=event.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
-            event.control
-        )
-        do.call(fit_surv,fit_surv_arg)
+        if(event.method=="survSuperLearner"){
+            fit_surv_arg<-c(
+                list(method=event.method,formula=event.formula[[k-index.shift]],data=event.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
+                event.control
+            )
+            tryCatch({
+                do.call(fit_surv,fit_surv_arg)$event
+            },error=function(e){
+                stop("Error from survSuperLearner. Try other event.method")
+            })
+        }else{
+            form<-as.formula(paste("Surv(",time.var,",",event.var,")",
+                                   paste(as.character(event.formula[[k-index.shift]]),collapse=""),
+                                   collapse=""))
+            fit_surv_arg<-c(
+                list(method=event.method,formula=form,data=event.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
+                event.control
+            )
+            do.call(fit_surv,fit_surv_arg)
+        }
     })
     
     ############################################################################
