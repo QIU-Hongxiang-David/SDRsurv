@@ -1,21 +1,21 @@
 #' @title Doubly robust transformation
 #' @name DRtransform
 #' @description
-#' Given a `pred_event_censor` object in a time window, calculates the doubly robust transformation in the time window. The transformation is used as the outcome when estimating the conditional survival probability at the next check-in time.
+#' Given a `pred_event_censor` object in a time window, calculates the doubly robust transformation in the time window. The transformation is used as the outcome when estimating the conditional survival probability at the next visit time.
 #' @param follow.up.time see \code{\link{SDRsurv}}
 #' @param pred_event_censor_obj a `pred_event_censor` object in the time window of interest
 #' @param tvals see \code{\link{SDRsurv}}. Must be sorted in ascending order and all greater than the smallest time in `pred_event_censor_obj`
-#' @param next.check.in.time the next check-in time. Default is `Inf`, corresponding to the last time window
+#' @param next.visit.time the next visit time. Default is `Inf`, corresponding to the last time window
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
 #' @param denom.survival.trunc see \code{\link{SDRsurv}}
-#' @return a named matrix of transformations. Each row corresponds to an individual; each column corresponds to a value of `tvals`. Row names are elements in `follow.up.time$id.var`; column names are values of `tvals`.
+#' @return a named matrix of transformations used for regression. Each row corresponds to an individual; each column corresponds to a value of `tvals`. Row names are elements in `follow.up.time$id.var`; column names are values of `tvals`.
 #' @section Warning:
 #' This function is designed to be called by other functions such as \code{\link{SDRsurv}}, therefore inputs are not thoroughly checked. Incorrect inputs may lead to errors with non-informative messages. The user may call this function if more flexibility is desired.
 #' @export
-DRtransform<-function(follow.up.time,pred_event_censor_obj,tvals,next.check.in.time=Inf,id.var,time.var,event.var,denom.survival.trunc){
-    tvals.bar<-pmin(tvals,next.check.in.time) #tvals truncated at next check-in time
+DRtransform<-function(follow.up.time,pred_event_censor_obj,tvals,next.visit.time=Inf,id.var,time.var,event.var,denom.survival.trunc){
+    tvals.bar<-pmin(tvals,next.visit.time) #tvals truncated at next visit time
     
     #compute Ghat(s-) at s=event times
     Ghat.minus<-pred_event_censor_obj$event$surv
@@ -104,9 +104,10 @@ DRtransform<-function(follow.up.time,pred_event_censor_obj,tvals,next.check.in.t
                     integral.Xt<-integral[i,k.int]
                 }
                 
-                output[i,j]<-Shat.t
                 if(Shat.t!=0){
-                    output[i,j]<-output[i,j]-Shat.t*(IPW.term-integral.Xt)
+                    output[i,j]<-Shat.t-Shat.t*(IPW.term-integral.Xt)
+                }else{
+                    output[i,j]<-Shat.t
                 }
             }
         }
@@ -121,14 +122,14 @@ DRtransform<-function(follow.up.time,pred_event_censor_obj,tvals,next.check.in.t
 #' @description Apply doubly robust transformation on fitted survival and censoring probabilities in each time window and estimate P(T > t | T > truncation time, covariates available at truncation time) with \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}.
 #' @param covariates see \code{\link{SDRsurv}}
 #' @param follow.up.time see \code{\link{SDRsurv}}
-#' @param pred_event_censor.list list of `pred_event_censor` objects (see \code{\link{pred_event_censor}}). Each `pred_event_censor` object in the list corresponds to a time window in `check.in.times` after `truncation.index` in increasing order.
-#' @param check.in.times see \code{\link{SDRsurv}}
+#' @param pred_event_censor.list list of `pred_event_censor` objects (see \code{\link{pred_event_censor}}). Each `pred_event_censor` object in the list corresponds to a time window in `visit.times` after `truncation.index` in increasing order.
+#' @param visit.times see \code{\link{SDRsurv}}
 #' @param tvals see \code{\link{SDRsurv}}. Must be sorted in ascending order.
 #' @param truncation.index see \code{\link{SDRsurv}}
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
-#' @param Q.formula formula to specify covariates being used for estimating P(T > t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability, which is simply the mean of pseudo-outcomes. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `truncation.time`.
+#' @param Q.formula formula to specify covariates being used for estimating P(T > t | T > `visit.times[truncation.index]`, covariates available at `visit.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability, which is simply the mean of pseudo-outcomes. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `truncation.time`.
 #' @param Q.SuperLearner.control see \code{\link{SDRsurv}}
 #' @param denom.survival.trunc see \code{\link{SDRsurv}}
 #' @return  a list of \code{\link{mult_stage_survfit}} objects, each corresponding to a value in `tvals`
@@ -141,7 +142,7 @@ SDRreg.SuperLearner<-function(
     covariates,
     follow.up.time,
     pred_event_censor.list,
-    check.in.times,
+    visit.times,
     tvals,
     truncation.index,
     id.var,
@@ -179,8 +180,8 @@ SDRreg.SuperLearner<-function(
     }
     
     
-    #K is the last check.in.time that needs to be considered
-    K<-find.last.TRUE.index(check.in.times<tail(tvals,1))
+    #K is the last visit.time that needs to be considered
+    K<-find.last.TRUE.index(visit.times<tail(tvals,1))
     
     index.shift<-truncation.index-1 #shift for the index of pred_event_censor.list
     
@@ -190,32 +191,34 @@ SDRreg.SuperLearner<-function(
     
     #stagewise.models is a list of list of models: the outer layer corresponds to time windows; the inner layer corresponds to tvals; a model is NULL if the corresponding t is before the time window
     stagewise.models<-lapply(truncation.index:K,function(k){
-        if(k<length(check.in.times)){
-            pred_event_censor_obj<-truncate_pred_event_censor(pred_event_censor.list[[k-index.shift]],check.in.times[k+1])
+        if(k<length(visit.times)){
+            pred_event_censor_obj<-truncate_pred_event_censor(pred_event_censor.list[[k-index.shift]],visit.times[k+1])
         }else{
             pred_event_censor_obj<-pred_event_censor.list[[k-index.shift]]
         }
         
         if(k==K){
-            next.check.in.time<-tail(tvals,1) #only need predictions up to the last tvals
+            next.visit.time<-tail(tvals,1) #only need predictions up to the last tvals
         }else{
-            next.check.in.time<-check.in.times[k+1]
+            next.visit.time<-visit.times[k+1]
         }
         
         models<-list()
         for(i in seq_along(tvals)){
-            if(tvals[i]<=check.in.times[k]){ #no regression for this t
+            if(tvals[i]<=visit.times[k]){ #no regression for this t
                 models<-c(models,list(NULL))
-            }else if(i>1 && tvals[i-1]>next.check.in.time){ #same time window of interest, same regression model as the previous t
+            }else if(i>1 && tvals[i-1]>next.visit.time){ #same time window of interest, same regression model as the previous t
                 models<-c(models,models[i-1])
             }else{
                 Y<-DRtransform(follow.up.time,pred_event_censor_obj,tvals[i],
-                               next.check.in.time=next.check.in.time,
-                               id.var,time.var,event.var,denom.survival.trunc)
+                                   next.visit.time=next.visit.time,
+                                   id.var,time.var,event.var,denom.survival.trunc)
                 X<-model.frame(Q.formula,data=history%>%filter(.data[[id.var]] %in% rownames(Y))%>%select(!.data[[id.var]]))
                 Y<-Y[,1]
                 if(ncol(X)==0){ #intercept-only model
-                    models<-c(models,list(intercept_model(mean(Y))))
+                    est<-mean(Y)
+                    IF<-Y-est
+                    models<-c(models,list(intercept_IF_model(est,IF)))
                 }else{
                     SuperLearner.arg<-c(
                         list(Y=Y,X=X),
@@ -234,6 +237,6 @@ SDRreg.SuperLearner<-function(
             x[[i]]
         })
         models<-models[!sapply(models,is.null)]
-        mult_stage_survfit(covariate.data=history,formula=Q.formula,check.in.times=check.in.times,tval=tvals[i],truncation.index=truncation.index,models=models)
+        mult_stage_survfit(covariate.data=history,formula=Q.formula,visit.times=visit.times,tval=tvals[i],truncation.index=truncation.index,models=models)
     })
 }

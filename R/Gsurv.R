@@ -3,27 +3,27 @@
 #' @description
 #' Estimate P(T > t | T > truncation time, covariates available at truncation time) for given t, where T is the time to event, using G-computation transformation. Use a user-specified flexible method to fit survival curves of time to event/censoring at each stage and then use \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} to regress pseudo-outcome on covariates in order to estimate P(T > t | T > truncation time, covariates available at truncation time).
 #'
-#' @param covariates a list of data frames of covarates in the order of check in times. Each data frame contains the covariates collected at a check-in time. Data frames may have different numbers of variables (may collect different variables at different check-in times) and different numbers of individuals (some individuals may have an event or is censored before a later check-in time). All data frames must have a common character variable (see `id.var`) that identifies each individual but no other variables with common names. No missing data is allowed.
+#' @param covariates a list of data frames of covarates in the order of visit times. Each data frame contains the covariates collected at a visit time. Data frames may have different numbers of variables (may collect different variables at different visit times) and different numbers of individuals (some individuals may have an event or is censored before a later visit time). All data frames must have a common character variable (see `id.var`) that identifies each individual but no other variables with common names. No missing data is allowed.
 #' @param follow.up.time data frame of follow up times, i.e., times to event/censoring. Contains the variable that identifies each individual, the follow up times and an indicator of event/(right-)censoring. Follow up times must be numeric. Indicator of event/censoring should be binary with 0=censored, 1=event.
-#' @param check.in.times numeric/integer vector of check-in times in ascending order. The first check-in time is typically the baseline.
+#' @param visit.times numeric/integer vector of visit times in ascending order. The first visit time is typically the baseline.
 #' @param tvals times t for which P(T > t) given covariates are computed (T is the time to event). Default is all unique event times in `follow.up.time`. Will be sorted in ascending order.
-#' @param truncation.index index of the check-in time to which left-truncation is applied. The truncation time is `check.in.times[truncation.index]`. Covariates available up to (inclusive) `check.in.times[truncation.index]` are of interest. Default is 1, corresponding to no truncation.
+#' @param truncation.index index of the visit time to which left-truncation is applied. The truncation time is `visit.times[truncation.index]`. Covariates available up to (inclusive) `visit.times[truncation.index]` are of interest. Default is 1, corresponding to no truncation.
 #' @param id.var (character) name of the variable that identifies each individual.
 #' @param time.var (character) name of the variable containing follow up times in the data frame `follow.up.time`.
 #' @param event.var (character) name of the variable containing indicator of event/censoring in the data frame `follow.up.time`.
-#' @param event.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each check-in time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all check-in times, which includes main effects of all covariates available at each check-in time.
-#' @param Q.formula formula to specify covariates being used for estimating P(T > t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `check.in.times[truncation.index]`.
+#' @param event.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each visit time. The length should be the number of visit times after `truncation.index` (inclusive). Default is `~ .` for all visit times, which includes main effects of all covariates available at each visit time.
+#' @param Q.formula formula to specify covariates being used for estimating P(T > t | T > `visit.times[truncation.index]`, covariates available at `visit.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `visit.times[truncation.index]`.
 #' @param event.method one of `"survSuperLearner"`, `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit  survival curves of time to event in each time window. See the underlying wrappers \code{\link{fit_survSuperLearner}}, \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for more details and the available options. Default is `"survSuperLearner"`, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window.
 #' @param event.control a returned value from \code{\link{fit_surv_option}}. For `event.method="survSuperLearner"`, default is setting library for both event and censoring to be `c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc")`.
 #' @param Q.SuperLearner.control a list containing optional arguments passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}. We encourage using a named list. Will be passed to \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} by running a command like `do.call(SuperLearner, Q.SuperLearner.control)`. Default is `list(SL.library="SL.lm")`, which uses linear regression. The user should not specify `Y` and `X`, and must specify `SL.library` if default is not used. If `family` is gaussian by default if unspecified, and must be gaussian if specified, with a possibly non-identity link. When `Q.formula` only includes an intercept, \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}} will not be called and the default setting can be used.
 #' @return a list of fitted `SuperLearner` models corresponding to each t in `tvals`.
 #' @section Formula arguments:
-#' All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., `~ V1 + V2 + V3`. At each check-in time, the corresponding formulas may (and usually should) contain covariates at previous check-in times, and must only include available covariates up to (inclusive) that check-in time. Interactions, polynomials and splines may be treated differently by different machine learning methods to estimate conditional survival curves.
+#' All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., `~ V1 + V2 + V3`. At each visit time, the corresponding formulas may (and usually should) contain covariates at previous visit times, and must only include available covariates up to (inclusive) that visit time. Interactions, polynomials and splines may be treated differently by different machine learning methods to estimate conditional survival curves.
 #' @export
 Gsurv<-function(
     covariates,
     follow.up.time,
-    check.in.times,
+    visit.times,
     tvals=NULL,
     truncation.index=1,
     id.var,
@@ -47,7 +47,7 @@ Gsurv<-function(
     
     event.method<-match.arg(event.method)
     
-    K<-length(check.in.times) #number of check-in times
+    K<-length(visit.times) #number of visit times
     
     ############################################################################
     # check inputs are valid and set default values
@@ -101,17 +101,17 @@ Gsurv<-function(
     
     all.event.times<-follow.up.time%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
 
-    #check if check.in.times are ascending with unique values
-    if(is.unsorted(check.in.times,strictly=TRUE)){
-        stop("check.in.times is not sorted in ascending order with unique values")
+    #check if visit.times are ascending with unique values
+    if(is.unsorted(visit.times,strictly=TRUE)){
+        stop("visit.times is not sorted in ascending order with unique values")
     }
     
-    #check if all follow up times are >= the first check-in time
-    if(!all(pull(follow.up.time,.data[[time.var]])>=check.in.times[1])){
-        stop("At least one time in follow.up.time is earlier than the first check-in time")
+    #check if all follow up times are >= the first visit time
+    if(!all(pull(follow.up.time,.data[[time.var]])>=visit.times[1])){
+        stop("At least one time in follow.up.time is earlier than the first visit time")
     }
     
-    #set default tvals and check they are numbers that are greater than the first check-in time
+    #set default tvals and check they are numbers that are greater than the first visit time
     if(is.null(tvals)){
         if(event.method %in% c("coxtime","deepsurv","dnnsurv","akritas")){
             warning("When tvals are all event times, using coxtime, deepsurv, dnnsurv or akritas may lead to imprecision caused by conversion between numeric and character.")
@@ -120,8 +120,8 @@ Gsurv<-function(
     }
     assert_that(is.numeric(tvals),noNA(tvals))
     tvals<-sort(tvals)
-    if(!all(tvals>=check.in.times[1])){
-        stop("At least one value in tvals is earlier than the first check-in time")
+    if(!all(tvals>=visit.times[1])){
+        stop("At least one value in tvals is earlier than the first visit time")
     }
     
     #check max(tvals) is reasonable
@@ -131,7 +131,7 @@ Gsurv<-function(
     
     #check if truncation.index is valid
     assert_that(is.count(truncation.index),truncation.index<=K)
-    if(!all(tvals>check.in.times[truncation.index])){
+    if(!all(tvals>visit.times[truncation.index])){
         stop("At least one value in tvals is earlier than the left-truncation time")
     }
     
@@ -147,8 +147,8 @@ Gsurv<-function(
     #check individuals' follow up times are consistent with available covariates
     lapply(1:K,function(i){
         if(!setequal(pull(covariates[[i]],.data[[id.var]]),
-                     follow.up.time%>%filter(.data[[time.var]]>check.in.times[i])%>%pull(.data[[id.var]]))){
-            stop(paste0("Individuals in covariates[[",i,"]] differ from those being followed up after check.in.time[i]"))
+                     follow.up.time%>%filter(.data[[time.var]]>visit.times[i])%>%pull(.data[[id.var]]))){
+            stop(paste0("Individuals in covariates[[",i,"]] differ from those being followed up after visit.time[i]"))
         }
     })
     
@@ -160,10 +160,10 @@ Gsurv<-function(
         }
     })
     
-    #set default formulas for survival regressions and check if variables are all available at each check-in time
+    #set default formulas for survival regressions and check if variables are all available at each visit time
     #also check duplicated variable names in covariates
     if(is.null(event.formula)){
-        event.formula<-lapply(check.in.times,function(x) ~.)
+        event.formula<-lapply(visit.times,function(x) ~.)
     }
     history.covars<-NULL
     for(k in 1:K){
@@ -179,7 +179,7 @@ Gsurv<-function(
         
         event.covars<-setdiff(all.vars(event.formula[[k]]),".")
         if(!all(event.covars %in% history.covars)){
-            stop(paste0("event.formula[[",k,"]] contains varibales not available at check.in.times[",k,"]"))
+            stop(paste0("event.formula[[",k,"]] contains varibales not available at visit.times[",k,"]"))
         }
     }
     
@@ -223,8 +223,8 @@ Gsurv<-function(
     ############################################################################
     # run survival regressions
     ############################################################################
-    #K is the last check.in.time that needs to be considered
-    K<-find.last.TRUE.index(check.in.times<tail(tvals,1))
+    #K is the last visit.time that needs to be considered
+    K<-find.last.TRUE.index(visit.times<tail(tvals,1))
     
     index.shift<-truncation.index-1 #shift for the index of pred_event.list
     
@@ -233,8 +233,8 @@ Gsurv<-function(
             right_join(d1,d2,by=id.var)
         })%>%arrange(.data[[id.var]])
         
-        if(k<length(check.in.times)){
-            event.follow.up.time<-admin.censor(follow.up.time,time.var,event.var,check.in.times[k+1])
+        if(k<length(visit.times)){
+            event.follow.up.time<-admin.censor(follow.up.time,time.var,event.var,visit.times[k+1])
         }else{
             event.follow.up.time<-follow.up.time
         }
@@ -265,5 +265,5 @@ Gsurv<-function(
     ############################################################################
     # G-computation transformation and regression
     ############################################################################
-    Greg.SuperLearner(covariates,follow.up.time,pred_event.list,check.in.times,tvals,truncation.index,id.var,time.var,event.var,Q.formula,Q.SuperLearner.control)
+    Greg.SuperLearner(covariates,follow.up.time,pred_event.list,visit.times,tvals,truncation.index,id.var,time.var,event.var,Q.formula,Q.SuperLearner.control)
 }

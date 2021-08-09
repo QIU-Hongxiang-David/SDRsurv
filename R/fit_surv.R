@@ -17,6 +17,7 @@ fit_surv_option<-function(nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=l
     out
 }
 
+
 fit_surv<-function(method=c("survSuperLearner","rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),...){
     method<-match.arg(method)
     if(method=="survSuperLearner"){
@@ -519,6 +520,8 @@ fit_coxph<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
     if(any(grepl("strata\\(.*\\)",as.character(formula)))){
         warning("strata() function seems to be used in the formula. This may lead to an error.")
     }
+    
+    all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
     if(nfold==1){
         if(all(pull(data,.data[[event.var]])==0)){
             fit_no_event(data,id.var)
@@ -528,13 +531,15 @@ fit_coxph<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
                 option
             )
             cox.model<-do.call(survival::coxph,arg)
-            model<-survival::survfit(cox.model,newdata=data)
-            surv<-t(as.matrix.rowvec(model$surv))
+            surv<-lapply(all.times,function(t){
+                predict(cox.model,newdata=data%>%mutate("{time.var}":=t),type="survival")
+            })%>%do.call(what=cbind)
+            # model<-survival::survfit(cox.model,newdata=data)
+            # surv<-t(as.matrix.rowvec(model$surv))
             rownames(surv)<-pull(data,.data[[id.var]])
-            pred_surv(time=model$time,surv=surv)
+            pred_surv(time=all.times,surv=surv)
         }
     }else{
-        all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
         folds<-create.folds(pull(data,.data[[id.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
@@ -547,17 +552,20 @@ fit_coxph<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
                     option
                 )
                 cox.model<-do.call(survival::coxph,arg)
-                model<-survival::survfit(cox.model,newdata=data%>%filter(.data[[id.var]] %in% .env$fold))
-                model.surv<-t(as.matrix.rowvec(model$surv))
                 surv<-lapply(all.times,function(t){
-                    i<-find.first.TRUE.index(model$time.interest<=t,noTRUE=0)
-                    if(i==0){
-                        out<-matrix(1,nrow=length(fold),ncol=1)
-                    }else{
-                        out<-as.matrix(model$surv)[,i]
-                    }
-                    out
+                    predict(cox.model,newdata=data%>%filter(.data[[id.var]] %in% .env$fold)%>%mutate("{time.var}":=t),type="survival")
                 })%>%do.call(what=cbind)
+                # model<-survival::survfit(cox.model,newdata=data%>%filter(.data[[id.var]] %in% .env$fold))
+                # model.surv<-t(as.matrix.rowvec(model$surv))
+                # surv<-lapply(all.times,function(t){
+                #     i<-find.first.TRUE.index(model$time.interest<=t,noTRUE=0)
+                #     if(i==0){
+                #         out<-matrix(1,nrow=length(fold),ncol=1)
+                #     }else{
+                #         out<-as.matrix(model$surv)[,i]
+                #     }
+                #     out
+                # })%>%do.call(what=cbind)
                 rownames(surv)<-fold
                 surv
             }

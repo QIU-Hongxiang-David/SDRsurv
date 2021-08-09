@@ -7,7 +7,7 @@
 intercept_model(value)
 }
 \arguments{
-\item{value:}{the predicted mean value}
+\item{value}{the predicted mean value}
 }
 \value{
 an "\code{intercept_model}" object, essentially a list with element \code{value}.

@@ -7,7 +7,7 @@
 SDRsurv(
   covariates,
   follow.up.time,
-  check.in.times,
+  visit.times,
   tvals = NULL,
   truncation.index = 1,
   id.var,
@@ -30,15 +30,15 @@ SDRsurv(
 )
 }
 \arguments{
-\item{covariates}{a list of data frames of covarates in the order of check in times. Each data frame contains the covariates collected at a check-in time. Data frames may have different numbers of variables (may collect different variables at different check-in times) and different numbers of individuals (some individuals may have an event or is censored before a later check-in time). All data frames must have a common character variable (see \code{id.var}) that identifies each individual but no other variables with common names. No missing data is allowed.}
+\item{covariates}{a list of data frames of covarates in the order of check in times. Each data frame contains the covariates collected at a visit time. Data frames may have different numbers of variables (may collect different variables at different visit times) and different numbers of individuals (some individuals may have an event or is censored before a later visit time). All data frames must have a common character variable (see \code{id.var}) that identifies each individual but no other variables with common names. No missing data is allowed.}
 
 \item{follow.up.time}{data frame of follow up times, i.e., times to event/censoring. Contains the variable that identifies each individual, the follow up times and an indicator of event/(right-)censoring. Follow up times must be numeric. Indicator of event/censoring should be binary with 0=censored, 1=event.}
 
-\item{check.in.times}{numeric/integer vector of check-in times in ascending order. The first check-in time is typically the baseline.}
+\item{visit.times}{numeric/integer vector of fixed visit times in ascending order. The first visit time is typically the baseline.}
 
 \item{tvals}{times t for which P(T > t) given covariates are computed (T is the time to event). Default is all unique event times in \code{follow.up.time}. Will be sorted in ascending order.}
 
-\item{truncation.index}{index of the check-in time to which left-truncation is applied. The truncation time is \code{check.in.times[truncation.index]}. Covariates available up to (inclusive) \code{check.in.times[truncation.index]} are of interest. Default is 1, corresponding to no truncation.}
+\item{truncation.index}{index of the visit time to which left-truncation is applied. The truncation time is \code{visit.times[truncation.index]}. Covariates available up to (inclusive) \code{visit.times[truncation.index]} are of interest. Default is 1, corresponding to no truncation.}
 
 \item{id.var}{(character) name of the variable that identifies each individual.}
 
@@ -46,11 +46,11 @@ SDRsurv(
 
 \item{event.var}{(character) name of the variable containing indicator of event/censoring in the data frame \code{follow.up.time}.}
 
-\item{event.formula}{a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each check-in time. The length should be the number of check in times after \code{truncation.index} (inclusive). Default is \code{~ .} for all check-in times, which includes main effects of all covariates available at each check-in time.}
+\item{event.formula}{a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each visit time. The length should be the number of check in times after \code{truncation.index} (inclusive). Default is \code{~ .} for all visit times, which includes main effects of all covariates available at each visit time.}
 
-\item{censor.formula}{a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each check-in time. Similar to \code{event.formula}. If \code{event.method} is chosen as \code{"survSuperLearner"}, \code{censor.formula} is not used and \code{event.formula} is used instead.}
+\item{censor.formula}{a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each visit time. Similar to \code{event.formula}. If \code{event.method} is chosen as \code{"survSuperLearner"}, \code{censor.formula} is not used and \code{event.formula} is used instead.}
 
-\item{Q.formula}{formula to specify covariates being used for estimating P(T > t | T > \code{check.in.times[truncation.index]}, covariates available at \code{check.in.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{check.in.times[truncation.index]}.}
+\item{Q.formula}{formula to specify covariates being used for estimating P(T > t | T > \code{visit.times[truncation.index]}, covariates available at \code{visit.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{visit.times[truncation.index]}.}
 
 \item{event.method}{one of \code{"survSuperLearner"}, \code{"rfsrc"}, \code{"ctree"}, \code{"rpart"}, \code{"cforest"}, \code{"coxph"}, \code{"coxtime"}, \code{"deepsurv"}, \code{"dnnsurv"}, \code{"akritas"}. The machine learning method to fit  survival curves of time to event in each time window. See the underlying wrappers \code{\link{fit_survSuperLearner}}, \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for more details and the available options. Default is \code{"survSuperLearner"}, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window. If at least one of \code{event.method} and \code{censor.method} is \code{"survSuperLearner"}, then survival curves of both time to event and time to censoring are fitted by \code{\link{fit_survSuperLearner}}.}
 
@@ -74,6 +74,6 @@ Estimate P(T > t | T > truncation time, covariates available at truncation time)
 }
 \section{Formula arguments}{
 
-All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., \code{~ V1 + V2 + V3}. At each check-in time, the corresponding formulas may (and usually should) contain covariates at previous check-in times, and must only include available covariates up to (inclusive) that check-in time. Interactions, polynomials and splines may be treated differently by different machine learning methods to estimate conditional survival curves.
+All formulas should have covariates on the right-hand side and no terms on the left-hand side, e.g., \code{~ V1 + V2 + V3}. At each visit time, the corresponding formulas may (and usually should) contain covariates at previous visit times, and must only include available covariates up to (inclusive) that visit time. Interactions, polynomials and splines may be treated differently by different machine learning methods to estimate conditional survival curves.
 }
 

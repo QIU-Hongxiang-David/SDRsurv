@@ -8,7 +8,7 @@ Greg.SuperLearner(
   covariates,
   follow.up.time,
   pred_event.list,
-  check.in.times,
+  visit.times,
   tvals,
   truncation.index,
   id.var,
@@ -23,9 +23,9 @@ Greg.SuperLearner(
 
 \item{follow.up.time}{see \code{\link{SDRsurv}}}
 
-\item{pred_event.list}{list of \code{pred_surv} objects for time to event. Each \code{pred_event_censor} object in the list corresponds to a time window in \code{check.in.times} after \code{truncation.index} in increasing order.}
+\item{pred_event.list}{list of \code{pred_surv} objects for time to event. Each \code{pred_event_censor} object in the list corresponds to a time window in \code{visit.times} after \code{truncation.index} in increasing order.}
 
-\item{check.in.times}{see \code{\link{SDRsurv}}}
+\item{visit.times}{see \code{\link{SDRsurv}}}
 
 \item{tvals}{see \code{\link{SDRsurv}}. Must be sorted in ascending order.}
 
@@ -37,7 +37,7 @@ Greg.SuperLearner(
 
 \item{event.var}{see \code{\link{SDRsurv}}}
 
-\item{Q.formula}{formula to specify covariates being used for estimating P(T > t | T > \code{check.in.times[truncation.index]}, covariates available at \code{check.in.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability, which is simply the mean of pseudo-outcomes. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{truncation.time}.}
+\item{Q.formula}{formula to specify covariates being used for estimating P(T > t | T > \code{visit.times[truncation.index]}, covariates available at \code{visit.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability, which is simply the mean of pseudo-outcomes. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{truncation.time}.}
 
 \item{Q.SuperLearner.control}{see \code{\link{SDRsurv}}}
 }

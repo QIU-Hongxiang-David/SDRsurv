@@ -7,7 +7,7 @@
 mult_stage_survfit(
   covariate.data,
   formula,
-  check.in.times,
+  visit.times,
   tval,
   truncation.index,
   models
@@ -18,11 +18,11 @@ mult_stage_survfit(
 
 \item{formula}{formula used in the models}
 
-\item{check.in.times}{numeric/integer vector of check-in times in ascending order. The first check-in time is typically the baseline.}
+\item{visit.times}{numeric/integer vector of visit times in ascending order. The first visit time is typically the baseline.}
 
-\item{truncation.index}{index of the check-in time to which left-truncation is applied. The truncation time is \code{check.in.times[truncation.index]}. Covariates available up to (inclusive) \code{check.in.times[truncation.index]} are of interest.}
+\item{truncation.index}{index of the visit time to which left-truncation is applied. The truncation time is \code{visit.times[truncation.index]}. Covariates available up to (inclusive) \code{visit.times[truncation.index]} are of interest.}
 
-\item{models}{list of models. Each model can predict the survival probability beyond the next check-in time given survival at the current check-in time. Models should be in an ascending order according to the corresponding check-in times.}
+\item{models}{list of models. Each model can predict the survival probability beyond the next visit time given survival at the current visit time. Models should be in an ascending order according to the corresponding visit times.}
 
 \item{tvals}{time t for which P(T > t) (potentially given covariates) is estimated (T is the time to event)}
 }

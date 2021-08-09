@@ -1,11 +1,11 @@
 #' @title Inverse-probability weighting (IPW) transformation
 #' @name IPWtransform
 #' @description
-#' Given a `pred_surv` object for time to censoring in a time window, calculates the IPW transformation in the time window. The transformation is used as the outcome when estimating the conditional survival probability at the next check-in time.
+#' Given a `pred_surv` object for time to censoring in a time window, calculates the IPW transformation in the time window. The transformation is used as the outcome when estimating the conditional survival probability at the next visit time.
 #' @param follow.up.time see \code{\link{SDRsurv}}
 #' @param pred_censor_obj a `pred_surv` object for time to censoring in the time window of interest
 #' @param tvals see \code{\link{SDRsurv}}. Must be sorted in ascending order and all greater than the smallest time in `pred_censor_obj`
-#' @param next.check.in.time the next check-in time. Default is `Inf`, corresponding to the last time window
+#' @param next.visit.time the next visit time. Default is `Inf`, corresponding to the last time window
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
@@ -14,8 +14,8 @@
 #' @section Warning:
 #' This function is designed to be called by other functions such as \code{\link{IPWsurv}}, therefore inputs are not thoroughly checked. Incorrect inputs may lead to errors with non-informative messages. The user may call this function if more flexibility is desired.
 #' @export
-IPWtransform<-function(follow.up.time,pred_censor_obj,tvals,next.check.in.time=Inf,id.var,time.var,event.var,denom.survival.trunc){
-    tvals.bar<-pmin(tvals,next.check.in.time) #tvals truncated at next check-in time
+IPWtransform<-function(follow.up.time,pred_censor_obj,tvals,next.visit.time=Inf,id.var,time.var,event.var,denom.survival.trunc){
+    tvals.bar<-pmin(tvals,next.visit.time) #tvals truncated at next visit time
     
     output<-matrix(nrow=nrow(pred_censor_obj$surv),ncol=length(tvals.bar))
     rownames(output)<-rownames(pred_censor_obj$surv)
@@ -60,14 +60,14 @@ IPWtransform<-function(follow.up.time,pred_censor_obj,tvals,next.check.in.time=I
 #' @description Apply IPW transformation on fitted survival and censoring probabilities in each time window and estimate P(T > t | T > truncation time, covariates available at truncation time) with \code{\link[SuperLearner:SuperLearner]{SuperLearner::SuperLearner}}.
 #' @param covariates see \code{\link{SDRsurv}}
 #' @param follow.up.time see \code{\link{SDRsurv}}
-#' @param pred_censor.list list of `pred_surv` objects for time to censoring. Each `pred_censor.list` object in the list corresponds to a time window in `check.in.times` after `truncation.index` in increasing order.
-#' @param check.in.times see \code{\link{SDRsurv}}
+#' @param pred_censor.list list of `pred_surv` objects for time to censoring. Each `pred_censor.list` object in the list corresponds to a time window in `visit.times` after `truncation.index` in increasing order.
+#' @param visit.times see \code{\link{SDRsurv}}
 #' @param tvals see \code{\link{SDRsurv}}. Must be sorted in ascending order.
 #' @param truncation.index see \code{\link{SDRsurv}}
 #' @param id.var see \code{\link{SDRsurv}}
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
-#' @param Q.formula formula to specify covariates being used for estimating P(T > t | T > `check.in.times[truncation.index]`, covariates available at `check.in.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability, which is simply the mean of pseudo-outcomes. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `truncation.time`.
+#' @param Q.formula formula to specify covariates being used for estimating P(T > t | T > `visit.times[truncation.index]`, covariates available at `visit.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability, which is simply the mean of pseudo-outcomes. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `truncation.time`.
 #' @param Q.SuperLearner.control see \code{\link{SDRsurv}}
 #' @param denom.survival.trunc see \code{\link{SDRsurv}}
 #' @return  a list of \code{\link{mult_stage_survfit}} objects, each corresponding to a value in `tvals`
@@ -80,7 +80,7 @@ IPWreg.SuperLearner<-function(
     covariates,
     follow.up.time,
     pred_censor.list,
-    check.in.times,
+    visit.times,
     tvals,
     truncation.index,
     id.var,
@@ -118,8 +118,8 @@ IPWreg.SuperLearner<-function(
     }
     
     
-    #K is the last check.in.time that needs to be considered
-    K<-find.last.TRUE.index(check.in.times<tail(tvals,1))
+    #K is the last visit.time that needs to be considered
+    K<-find.last.TRUE.index(visit.times<tail(tvals,1))
     
     index.shift<-truncation.index-1 #shift for the index of pred_censor.list
     
@@ -129,27 +129,27 @@ IPWreg.SuperLearner<-function(
     
     #stagewise.models is a list of list of models: the outer layer corresponds to time windows; the inner layer corresponds to tvals; a model is NULL if the corresponding t is before the time window
     stagewise.models<-lapply(truncation.index:K,function(k){
-        if(k<length(check.in.times)){
-            pred_censor_obj<-truncate_pred_surv(pred_censor.list[[k-index.shift]],check.in.times[k+1])
+        if(k<length(visit.times)){
+            pred_censor_obj<-truncate_pred_surv(pred_censor.list[[k-index.shift]],visit.times[k+1])
         }else{
             pred_censor_obj<-pred_censor.list[[k-index.shift]]
         }
         
         if(k==K){
-            next.check.in.time<-tail(tvals,1) #only need predictions up to the last tvals
+            next.visit.time<-tail(tvals,1) #only need predictions up to the last tvals
         }else{
-            next.check.in.time<-check.in.times[k+1]
+            next.visit.time<-visit.times[k+1]
         }
         
         models<-list()
         for(i in seq_along(tvals)){
-            if(tvals[i]<=check.in.times[k]){ #no regression for this t
+            if(tvals[i]<=visit.times[k]){ #no regression for this t
                 models<-c(models,list(NULL))
-            }else if(i>1 && tvals[i-1]>next.check.in.time){ #same time window of interest, same regression model as the previous t
+            }else if(i>1 && tvals[i-1]>next.visit.time){ #same time window of interest, same regression model as the previous t
                 models<-c(models,models[i-1])
             }else{
                 Y<-IPWtransform(follow.up.time,pred_censor_obj,tvals[i],
-                                next.check.in.time=next.check.in.time,
+                                next.visit.time=next.visit.time,
                                 id.var,time.var,event.var,denom.survival.trunc)
                 X<-model.frame(Q.formula,data=history%>%filter(.data[[id.var]] %in% rownames(Y))%>%select(!.data[[id.var]]))
                 Y<-Y[,1]
@@ -173,6 +173,6 @@ IPWreg.SuperLearner<-function(
             x[[i]]
         })
         models<-models[!sapply(models,is.null)]
-        mult_stage_survfit(covariate.data=history,formula=Q.formula,check.in.times=check.in.times,tval=tvals[i],truncation.index=truncation.index,models=models)
+        mult_stage_survfit(covariate.data=history,formula=Q.formula,visit.times=visit.times,tval=tvals[i],truncation.index=truncation.index,models=models)
     })
 }

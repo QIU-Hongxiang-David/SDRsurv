@@ -8,7 +8,7 @@ DRtransform(
   follow.up.time,
   pred_event_censor_obj,
   tvals,
-  next.check.in.time = Inf,
+  next.visit.time = Inf,
   id.var,
   time.var,
   event.var,
@@ -22,7 +22,7 @@ DRtransform(
 
 \item{tvals}{see \code{\link{SDRsurv}}. Must be sorted in ascending order and all greater than the smallest time in \code{pred_event_censor_obj}}
 
-\item{next.check.in.time}{the next check-in time. Default is \code{Inf}, corresponding to the last time window}
+\item{next.visit.time}{the next visit time. Default is \code{Inf}, corresponding to the last time window}
 
 \item{id.var}{see \code{\link{SDRsurv}}}
 
@@ -33,10 +33,10 @@ DRtransform(
 \item{denom.survival.trunc}{see \code{\link{SDRsurv}}}
 }
 \value{
-a named matrix of transformations. Each row corresponds to an individual; each column corresponds to a value of \code{tvals}. Row names are elements in \code{follow.up.time$id.var}; column names are values of \code{tvals}.
+a named matrix of transformations used for regression. Each row corresponds to an individual; each column corresponds to a value of \code{tvals}. Row names are elements in \code{follow.up.time$id.var}; column names are values of \code{tvals}.
 }
 \description{
-Given a \code{pred_event_censor} object in a time window, calculates the doubly robust transformation in the time window. The transformation is used as the outcome when estimating the conditional survival probability at the next check-in time.
+Given a \code{pred_event_censor} object in a time window, calculates the doubly robust transformation in the time window. The transformation is used as the outcome when estimating the conditional survival probability at the next visit time.
 }
 \section{Warning}{
 

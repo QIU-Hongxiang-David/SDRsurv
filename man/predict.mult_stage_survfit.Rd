@@ -9,6 +9,7 @@
   object,
   newdata = object$covariate.data,
   pred.prob.trunc = c(0, 1),
+  conf.level = 0.95,
   ...
 )
 
@@ -20,6 +21,8 @@
 \item{newdata}{new data frame of covariates used for prediction. Default is the \code{covariate.data} stored in \code{object}}
 
 \item{pred.prob.trunc}{values at which to truncate predicted survival probabilities from each model in \code{object}. Must be a numeric vector with 2 numbers in \eqn{[0,1]}. Default is \code{c(0,1)}.}
+
+\item{conf.level}{confidence level for confidence interval when using the SDR estimator to estimate a scalar estimand (rather than a function), i.e. a survival probability unconditional on covariates and possibly conditional on survival up to a visit time. Ignored otherwise. Default is 0.95.}
 
 \item{...}{further arguments passed to \code{predict} methods of the models in \code{object}}
 }
