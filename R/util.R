@@ -65,9 +65,16 @@ admin.censor<-function(follow.up.time,time.var,event.var,censor.time=Inf){
 
 
 #create k folds of a vector id
-create.folds<-function(id,k){
-    order<-sample.int(length(id))
-    d<-suppressWarnings(data.frame(cbind(id[order],1:k)))
+create.folds<-function(id,Delta,k){
+    id0<-id[Delta==0]
+    id1<-id[Delta==1]
+    
+    order0<-sample.int(length(id0))
+    order1<-sample.int(length(id1))
+    
+    d0<-suppressWarnings(data.frame(cbind(id0[order0],1:k)))[1:length(id0),,drop=FALSE]
+    d1<-suppressWarnings(data.frame(cbind(id1[order1],1:k)))[1:length(id1),,drop=FALSE]
+    d<-rbind(d0,d1)
     names(d)<-c("id","fold.id")
     lapply(tapply(d$id,d$fold.id,identity,simplify=FALSE),sort)
 }
@@ -93,7 +100,7 @@ as.matrix.rowvec<-function(x){
 #status: 1 if observed event; 0 if censoring
 left.shift.censoring<-function(time,status){
     epsilon<-time%>%unique%>%sort%>%diff%>%min
-    epsilon<-max(epsilon*.5,1e-5)
+    epsilon<-min(epsilon*.5,1e-5)
     time[status==0]<-time[status==0]-epsilon
     time
 }

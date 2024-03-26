@@ -18,7 +18,7 @@ fit_surv_option(
 
 \item{option}{a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like \code{do.call(machine.learning, option)} where \code{machine.learning} is the machine learning function being called. \code{formula} and \code{data} should not be specified. For \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, if \code{tune=TRUE}, then \code{mtry} and \code{nodesize} should not be specified either.}
 
-\item{oob}{whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} and \code{\link[party:cforest]{party::cforest}}) when sample splitting is not used (\code{nfold=1}). Ignored otherwise.}
+\item{oob}{whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, \code{\link[party:cforest]{party::cforest}}) and \code{\link[grf:survival_forest]{grf::survival_forest}}) when sample splitting is not used (\code{nfold=1}). Ignored otherwise.}
 
 \item{tune}{whether to tune \code{mtry} and \code{nodesize} for \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}. Ignored for other methods.}
 

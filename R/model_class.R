@@ -162,7 +162,7 @@ predict.mult_stage_survfit<-function(object,newdata=object$covariate.data,pred.p
             IF.mat[,k]*prod(predictions[-k])
         })%>%reduce(get("+"))
         
-        SE<-mean(final.IF^2)/sqrt(length(final.IF))
+        SE<-sqrt(mean(final.IF^2))/sqrt(length(final.IF))
         qs<-c((1-conf.level)/2,(1+conf.level)/2)
         CI<-final.pred+qnorm(qs)*SE
         names(CI)<-paste(round(qs*100,1),"%")

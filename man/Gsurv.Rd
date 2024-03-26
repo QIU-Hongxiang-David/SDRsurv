@@ -16,11 +16,15 @@ Gsurv(
   event.formula = NULL,
   Q.formula = ~.,
   event.method = c("survSuperLearner", "rfsrc", "ctree", "rpart", "cforest", "coxph",
-    "coxtime", "deepsurv", "dnnsurv", "akritas"),
-  event.control = if (event.method != "survSuperLearner") {     fit_surv_option() }
-    else {     fit_surv_option(option = list(event.SL.library = c("survSL.coxph",
+    "coxtime", "deepsurv", "dnnsurv", "akritas", "survival_forest"),
+  event.control = if (event.method != "survSuperLearner") {
+     fit_surv_option()
+ }
+    else {
+     fit_surv_option(option = list(event.SL.library = c("survSL.coxph",
     "survSL.weibreg", "survSL.gam", "survSL.rfsrc"), cens.SL.library = c("survSL.coxph",
-    "survSL.weibreg", "survSL.gam", "survSL.rfsrc"))) },
+    "survSL.weibreg", "survSL.gam", "survSL.rfsrc")))
+ },
   Q.SuperLearner.control = list(family = gaussian(), SL.library = "SL.lm")
 )
 }
@@ -45,7 +49,7 @@ Gsurv(
 
 \item{Q.formula}{formula to specify covariates being used for estimating P(T > t | T > \code{visit.times[truncation.index]}, covariates available at \code{visit.times[truncation.index]}). Set to include intercept only (\code{~ 0} or \code{~ -1}) for marginal survival probability. Default is \code{~ .}, which includes main effects of all available covariates up to (inclusive) the \code{visit.times[truncation.index]}.}
 
-\item{event.method}{one of \code{"survSuperLearner"}, \code{"rfsrc"}, \code{"ctree"}, \code{"rpart"}, \code{"cforest"}, \code{"coxph"}, \code{"coxtime"}, \code{"deepsurv"}, \code{"dnnsurv"}, \code{"akritas"}. The machine learning method to fit  survival curves of time to event in each time window. See the underlying wrappers \code{\link{fit_survSuperLearner}}, \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for more details and the available options. Default is \code{"survSuperLearner"}, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window.}
+\item{event.method}{one of \code{"survSuperLearner"}, \code{"rfsrc"}, \code{"ctree"}, \code{"rpart"}, \code{"cforest"}, \code{"coxph"}, \code{"coxtime"}, \code{"deepsurv"}, \code{"dnnsurv"}, \code{"akritas"}, \code{"survival_forest"}. The machine learning method to fit  survival curves of time to event in each time window. See the underlying wrappers \code{\link{fit_survSuperLearner}}, \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}}, \code{\link{fit_survival_forest}} for more details and the available options. Default is \code{"survSuperLearner"}, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window.}
 
 \item{event.control}{a returned value from \code{\link{fit_surv_option}}. For \code{event.method="survSuperLearner"}, default is setting library for both event and censoring to be \code{c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc")}.}
 

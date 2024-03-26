@@ -2,7 +2,7 @@
 #' @name fit_surv_option
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
 #' @param option a list containing optional arguments passed to the wrapped machine learning function. Will be used in a command like `do.call(machine.learning, option)` where `machine.learning` is the machine learning function being called. `formula` and `data` should not be specified. For \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, if `tune=TRUE`, then `mtry` and `nodesize` should not be specified either.
-#' @param oob whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} and \code{\link[party:cforest]{party::cforest}}) when sample splitting is not used (`nfold=1`). Ignored otherwise.
+#' @param oob whether to use out-of-bag (OOB) fitted values from random forests (\code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}, \code{\link[party:cforest]{party::cforest}}) and \code{\link[grf:survival_forest]{grf::survival_forest}}) when sample splitting is not used (`nfold=1`). Ignored otherwise.
 #' @param tune whether to tune `mtry` and `nodesize` for \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}}. Ignored for other methods.
 #' @param tune.option a list containing optional arguments passed to \code{\link[randomForestSRC:tune]{randomForestSRC::tune.rfsrc}} if \code{\link[randomForestSRC:rfsrc]{randomForestSRC::rfsrc}} is used and `tune=TRUE`; ignored otherwise. `doBest` should not be specified.
 #' @param lambda bandwidth parameter for uniform smoothing kernel in nearest neighbours estimation for method `"akritas"`. The default value of 0.5 is arbitrary and should be chosen by the user
@@ -18,7 +18,7 @@ fit_surv_option<-function(nfold=1,option=list(),oob=TRUE,tune=TRUE,tune.option=l
 }
 
 
-fit_surv<-function(method=c("survSuperLearner","rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),...){
+fit_surv<-function(method=c("survSuperLearner","rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas","survival_forest","no_event"),...){
     method<-match.arg(method)
     if(method=="survSuperLearner"){
         fit_survSuperLearner(...)
@@ -40,11 +40,16 @@ fit_surv<-function(method=c("survSuperLearner","rfsrc","ctree","rpart","cforest"
         fit_dnnsurv(...)
     }else if(method=="akritas"){
         fit_akritas(...)
+    }else if(method=="survival_forest"){
+        fit_survival_forest(...)
+    }else if(method=="no_event"){
+        warning("Returning constant 1 survival curve")
+        fit_no_event(...)
     }
 }
 
 
-fit_no_event<-function(data,id.var){
+fit_no_event<-function(data,id.var,...){
     surv<-matrix(1,nrow=nrow(data),ncol=1)
     rownames(surv)<-pull(data,.data[[id.var]])
     pred_surv(Inf,surv)
@@ -59,7 +64,7 @@ fit_no_event<-function(data,id.var){
 #' @param time.var see \code{\link{SDRsurv}}
 #' @param event.var see \code{\link{SDRsurv}}
 #' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
-#' @param option a list containing optional arguments passed to \code{\link[survSuperLearner:survSuperLearner]{survSuperLearner::survSuperLearner}}. We encourage using a named list. Will be passed to \code{\link[survSuperLearner:survSuperLearner]{survSuperLearner::survSuperLearner}} by running a command like `do.call(survSuperLearner, option)`. The user should not specify `time`, `event`, `X`, `newX` or `new.times`. We encourage the user to specify `event.SL.library` and `cens.SL.library`.
+#' @param option a list containing optional arguments passed to \code{\link[survSuperLearner:survSuperLearner]{survSuperLearner::survSuperLearner}}. We encourage using a named list. Will be passed to \code{\link[survSuperLearner:survSuperLearner]{survSuperLearner::survSuperLearner}} by running a command like `do.call(survSuperLearner, option)`. The user should not specify `time`, `event`, `X`, or `newX`. We encourage the user to specify `event.SL.library` and `cens.SL.library`.
 #' @param ... ignored
 #' @return a \code{\link{pred_event_censor}} class containing fitted survival curves for individuals in `data`
 #' @export
@@ -68,15 +73,31 @@ fit_survSuperLearner<-function(formula,data,id.var,time.var,event.var,nfold=1,op
     
     #check if option is a list and whether it specifies formula and data
     assert_that(is.list(option))
-    if(any(c("time","event","X","newX","new.times") %in% names(option))){
-        stop("option specifies time, event, X, newX or new.times")
+    if(any(c("time","event","X","newX") %in% names(option))){
+        stop("option specifies time, event, X, or newX")
     }
+    
+    formula<-as.formula(paste(as.character(formula)[-2],collapse=" "))
+    
+    # if(is.null(option$control$event.t.grid)){
+    #     option$control$event.t.grid<-data%>%pull(time.var)%>%range%>%{seq(.[1],.[2],length.out=250)}
+    # }
+    # if(is.null(option$control$cens.t.grid)){
+    #     option$control$cens.t.grid<-data%>%pull(time.var)%>%range%>%{seq(.[1],.[2],length.out=250)}
+    # }
     
     if(nfold==1){
         time<-data%>%pull(time.var)
         event<-data%>%pull(event.var)
+        
+        if(all(event==0)){
+            return(fit_no_event(data,id.var))
+        }
+        
         newX<-X<-model.frame(formula,data=data%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
+        
         new.times<-sort(unique(time))
+        new.times<-seq(min(time),max(time),length.out=250) #t grid
         
         arg<-c(list(time=time,event=event,X=X,newX=newX,new.times=new.times),option)
         model<-do.call(survSuperLearner::survSuperLearner,arg)
@@ -84,47 +105,65 @@ fit_survSuperLearner<-function(formula,data,id.var,time.var,event.var,nfold=1,op
         event.pred<-model$event.SL.predict
         row.names(event.pred)<-data%>%pull(id.var)
         
-        censor.pred<-model$cens.SL.predict
-        row.names(censor.pred)<-data%>%pull(id.var)
-        pred_event_censor(pred_surv(time=new.times,surv=event.pred),
-                          pred_surv(time=new.times,surv=censor.pred))
+        # censor.pred<-model$cens.SL.predict
+        # row.names(censor.pred)<-data%>%pull(id.var)
+        # pred_event_censor(pred_surv(time=new.times,surv=event.pred),
+        #                   pred_surv(time=new.times,surv=censor.pred))
+        pred_surv(time=new.times,surv=event.pred)
     }else{
         all.times<-data%>%pull(.data[[time.var]])%>%unique%>%sort
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
         
-        pred_event_censor.list<-lapply(folds,function(fold){
+        all.times<-seq(min(all.times),max(all.times),length.out=250) #t grid
+        
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
+        
+        # pred_event_censor.list
+        pred_event.list<-lapply(folds,function(fold){
             d<-data%>%filter(!(.data[[id.var]] %in% .env$fold))
             test.d<-data%>%filter(.data[[id.var]] %in% .env$fold)
             
             time<-d%>%pull(time.var)
             event<-d%>%pull(event.var)
-            X<-model.frame(formula,data=d%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
-            newX<-model.frame(formula,data=test.d%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
-            new.times<-all.times
             
-            arg<-c(list(time=time,event=event,X=X,newX=newX,new.times=new.times),option)
-            model<-do.call(survSuperLearner::survSuperLearner,arg)
+            if(all(event==0)){
+                event.pred<-matrix(1,nrow=length(fold),ncol=length(all.times))
+            }else{
+                X<-model.frame(formula,data=d%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
+                newX<-model.frame(formula,data=test.d%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
+                new.times<-all.times
+                
+                arg<-c(list(time=time,event=event,X=X,newX=newX,new.times=new.times),option)
+                model<-do.call(survSuperLearner::survSuperLearner,arg)
+                
+                event.pred<-model$event.SL.predict
+            }
             
-            event.pred<-model$event.SL.predict
             row.names(event.pred)<-fold
             
-            censor.pred<-model$cens.SL.predict
-            row.names(censor.pred)<-fold
-            
-            pred_event_censor(pred_surv(all.times,event.pred),pred_surv(all.times,censor.pred))
+            # censor.pred<-model$cens.SL.predict
+            # row.names(censor.pred)<-fold
+            # 
+            # pred_event_censor(pred_surv(all.times,event.pred),pred_surv(all.times,censor.pred))
+            pred_surv(all.times,event.pred)
         })
         
-        event.pred<-lapply(pred_event_censor.list,function(x){
-            x$event$surv
+        # event.pred<-lapply(pred_event_censor.list,function(x){
+        #     x$event$surv
+        # })%>%do.call(what=rbind)
+        # event.pred<-event.pred[order(rownames(event.pred)),,drop=FALSE]
+        # 
+        # censor.pred<-lapply(pred_event_censor.list,function(x){
+        #     x$censor$surv
+        # })%>%do.call(what=rbind)
+        # censor.pred<-censor.pred[order(rownames(censor.pred)),,drop=FALSE]
+        # 
+        # pred_event_censor(pred_surv(all.times,event.pred),pred_surv(all.times,censor.pred))
+        
+        event.pred<-lapply(pred_event.list,function(x){
+            x$surv
         })%>%do.call(what=rbind)
         event.pred<-event.pred[order(rownames(event.pred)),,drop=FALSE]
-        
-        censor.pred<-lapply(pred_event_censor.list,function(x){
-            x$censor$surv
-        })%>%do.call(what=rbind)
-        censor.pred<-censor.pred[order(rownames(censor.pred)),,drop=FALSE]
-        
-        pred_event_censor(pred_surv(all.times,event.pred),pred_surv(all.times,censor.pred))
+        pred_surv(all.times,event.pred)
     }
 }
 
@@ -197,7 +236,7 @@ fit_rfsrc<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
         rownames(surv)<-pull(data,.data[[id.var]])
         pred_surv(time=model$time.interest,surv=surv)
     }else{
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
                 surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
@@ -269,6 +308,9 @@ fit_ctree<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
     }
     
     all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    
+    all.times<-seq(min(all.times),max(all.times),length.out=250) #t grid
+    
     if(nfold==1){
         arg<-c(
             list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
@@ -289,7 +331,7 @@ fit_ctree<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
         rownames(surv)<-pull(data,.data[[id.var]])
         pred_surv(time=all.times,surv=surv)
     }else{
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
                 surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
@@ -353,6 +395,9 @@ fit_rpart<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
     }
     
     all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    
+    all.times<-seq(min(all.times),max(all.times),length.out=250) #t grid
+    
     if(nfold==1){
         arg<-c(
             list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
@@ -373,7 +418,7 @@ fit_rpart<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
         rownames(surv)<-pull(data,.data[[id.var]])
         pred_surv(time=all.times,surv=surv)
     }else{
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
                 surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
@@ -439,6 +484,9 @@ fit_cforest<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list
     }
     
     all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    
+    all.times<-seq(min(all.times),max(all.times),length.out=250) #t grid
+    
     if(nfold==1){
         arg<-c(
             list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
@@ -459,7 +507,7 @@ fit_cforest<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list
         rownames(surv)<-pull(data,.data[[id.var]])
         pred_surv(time=all.times,surv=surv)
     }else{
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
                 surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
@@ -510,6 +558,7 @@ fit_cforest<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list
 #' @export
 fit_coxph<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list(),...){
     .require("survival")
+    # .requireNamespace("pec")
     
     #check if option is a list and whether it specifies formula and data
     assert_that(is.list(option))
@@ -526,12 +575,16 @@ fit_coxph<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
     }
     
     all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    
+    all.times<-seq(min(all.times),max(all.times),length.out=250) #t grid
+    
     if(nfold==1){
         arg<-c(
             list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
             option
         )
         cox.model<-do.call(survival::coxph,arg)
+        # surv<-pec::predictSurvProb(cox.model,newdata=select(data,!.data[[id.var]]),times=all.times)
         surv<-lapply(all.times,function(t){
             predict(cox.model,newdata=data%>%mutate("{time.var}":=t),type="survival")
         })%>%do.call(what=cbind)
@@ -540,7 +593,7 @@ fit_coxph<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list()
         rownames(surv)<-pull(data,.data[[id.var]])
         pred_surv(time=all.times,surv=surv)
     }else{
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
                 surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
@@ -605,6 +658,7 @@ fit_coxtime<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list
     }
     
     all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    
     if(nfold==1){
         arg<-c(
             list(formula=formula,data=select(data,!.data[[id.var]])), #remove id.var to allow for . in formula
@@ -617,7 +671,7 @@ fit_coxtime<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list
         colnames(surv)<-NULL
         pred_surv(time=time,surv=surv)
     }else{
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
                 surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
@@ -693,7 +747,7 @@ fit_deepsurv<-function(formula,data,id.var,time.var,event.var,nfold=1,option=lis
         colnames(surv)<-NULL
         pred_surv(time=time,surv=surv)
     }else{
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
                 surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
@@ -769,7 +823,7 @@ fit_dnnsurv<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list
         colnames(surv)<-NULL
         pred_surv(time=time,surv=surv)
     }else{
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
                 surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
@@ -845,7 +899,7 @@ fit_akritas<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list
         colnames(surv)<-NULL
         pred_surv(time=time,surv=surv)
     }else{
-        folds<-create.folds(pull(data,.data[[id.var]]),nfold)
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
         surv.list<-lapply(folds,function(fold){
             if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
                 surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
@@ -869,6 +923,92 @@ fit_akritas<-function(formula,data,id.var,time.var,event.var,nfold=1,option=list
                     }
                     out
                 })%>%do.call(what=cbind)
+                rownames(surv)<-fold
+                surv
+            }
+        })
+        surv<-do.call(rbind,surv.list)
+        surv<-surv[order(rownames(surv)),,drop=FALSE]
+        pred_surv(time=all.times,surv=surv)
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+#' @title Wrapper of `grf::survival_forest`
+#' @name fit_survival_forest
+#' @param formula formula used by \code{\link[grf:survival_forest]{grf::survival_forest}}
+#' @param data data containing all covariates, follow-up time, event indicator and id
+#' @param id.var see \code{\link{SDRsurv}}
+#' @param time.var see \code{\link{SDRsurv}}
+#' @param event.var see \code{\link{SDRsurv}}
+#' @param nfold number of folds used when fitting survival curves with sample splitting. Default is 1, meaning no sample splitting
+#' @param oob whether to use out-of-bag (OOB) fitted values from \code{\link[grf:survival_forest]{grf::survival_forest}} when sample splitting is not used (`nfold=1`). Default is `TRUE`
+#' @param option a list containing optional arguments passed to \code{\link[grf:survival_forest]{grf::survival_forest}}. We encourage using a named list. Will be passed to \code{\link[grf:survival_forest]{grf::survival_forest}} by running a command like `do.call(survival_forest, option)`. The user should not specify `X`, `Y`, `D`, `failure.times` and `compute.oob.predictions`.
+#' @param ... ignored
+#' @return a \code{\link{pred_surv}} class containing fitted survival curves for individuals in `data`
+#' @export
+fit_survival_forest<-function(formula,data,id.var,time.var,event.var,nfold=1,oob=TRUE,option=list(),...){
+    .requireNamespace("grf")
+    
+    #check if oob is logical
+    assert_that(is.flag(oob))
+    
+    #check if option is a list and whether it specifies formula and data
+    assert_that(is.list(option))
+    if(any(c("X","Y","D","failure.times","compute.oob.predictions") %in% names(option))){
+        stop("option specifies X, Y, D, failure.times or compute.oob.predictions")
+    }
+    
+    formula<-as.formula(paste0("~",as.character(formula)[3]))
+    
+    all.times<-data%>%filter(.data[[event.var]]==1)%>%pull(.data[[time.var]])%>%unique%>%sort
+    
+    all.times<-seq(min(all.times),max(all.times),length.out=250) #t grid
+    
+    if(nfold==1){
+        time<-data%>%pull(time.var)
+        event<-data%>%pull(event.var)
+        newX<-X<-model.frame(formula,data=data%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
+        
+        option<-c(option,list(compute.oob.predictions=oob))
+        arg<-c(list(X=X,Y=time,D=event,failure.time=all.times),option)
+        model<-do.call(grf::survival_forest,arg)
+        
+        s.pred<-predict(model,newdata=newX)
+        time<-s.pred$failure.times
+        surv<-s.pred$predictions
+        rownames(surv)<-pull(data,.data[[id.var]])
+        colnames(surv)<-NULL
+        pred_surv(time=time,surv=surv)
+    }else{
+        folds<-create.folds(pull(data,.data[[id.var]]),pull(data,.data[[event.var]]),nfold)
+        surv.list<-lapply(folds,function(fold){
+            if(data%>%filter(!(.data[[id.var]] %in% .env$fold))%>%pull(.data[[event.var]])%>%{all(.==0)}){
+                surv<-matrix(1,nrow=length(fold),ncol=length(all.times))
+                rownames(surv)<-fold
+                surv
+            }else{
+                d<-data%>%filter(!(.data[[id.var]] %in% .env$fold))
+                test.d<-data%>%filter(.data[[id.var]] %in% .env$fold)
+                
+                time<-d%>%pull(time.var)
+                event<-d%>%pull(event.var)
+                X<-model.frame(formula,data=d%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
+                newX<-model.frame(formula,data=test.d%>%select(!c(.data[[id.var]],.data[[time.var]],.data[[event.var]])))
+                
+                arg<-c(list(X=X,Y=time,D=event,failure.time=all.times),option) #remove id.var to allow for . in formula
+                model<-do.call(grf::survival_forest,arg)
+                prediction<-predict(model,newdata=newX)
+                surv<-prediction$predictions
                 rownames(surv)<-fold
                 surv
             }

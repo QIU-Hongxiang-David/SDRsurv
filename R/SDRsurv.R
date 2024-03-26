@@ -14,8 +14,8 @@
 #' @param event.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to event at each visit time. The length should be the number of check in times after `truncation.index` (inclusive). Default is `~ .` for all visit times, which includes main effects of all covariates available at each visit time.
 #' @param censor.formula a list of formulas to specify covariates being used when estimating the conditional survival probabilities of time to censoring at each visit time. Similar to `event.formula`. If `event.method` is chosen as `"survSuperLearner"`, `censor.formula` is not used and `event.formula` is used instead.
 #' @param Q.formula formula to specify covariates being used for estimating P(T > t | T > `visit.times[truncation.index]`, covariates available at `visit.times[truncation.index]`). Set to include intercept only (`~ 0` or `~ -1`) for marginal survival probability. Default is `~ .`, which includes main effects of all available covariates up to (inclusive) the `visit.times[truncation.index]`.
-#' @param event.method one of `"survSuperLearner"`, `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit  survival curves of time to event in each time window. See the underlying wrappers \code{\link{fit_survSuperLearner}}, \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}} for more details and the available options. Default is `"survSuperLearner"`, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window. If at least one of `event.method` and `censor.method` is `"survSuperLearner"`, then survival curves of both time to event and time to censoring are fitted by \code{\link{fit_survSuperLearner}}.
-#' @param censor.method one of `"survSuperLearner"`, `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`. The machine learning method to fit survival survival curves of time to censoring in each time window. Similar to `event.method`. Default is `"survSuperLearner"`, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window. If at least one of `event.method` and `censor.method` is `"survSuperLearner"`, then survival curves of both time to event and time to censoring are fitted by \code{\link{fit_survSuperLearner}}.
+#' @param event.method one of `"survSuperLearner"`, `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`, `"survival_forest"`. The machine learning method to fit  survival curves of time to event in each time window. See the underlying wrappers \code{\link{fit_survSuperLearner}}, \code{\link{fit_rfsrc}}, \code{\link{fit_ctree}}, \code{\link{fit_rpart}}, \code{\link{fit_cforest}}, \code{\link{fit_coxph}}, \code{\link{fit_coxtime}}, \code{\link{fit_deepsurv}}, \code{\link{fit_dnnsurv}}, \code{\link{fit_akritas}}, \code{\link{fit_survival_forest}} for more details and the available options. Default is `"survSuperLearner"`, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window. If at least one of `event.method` and `censor.method` is `"survSuperLearner"`, then survival curves of both time to event and time to censoring are fitted by \code{\link{fit_survSuperLearner}}.
+#' @param censor.method one of `"survSuperLearner"`, `"rfsrc"`, `"ctree"`, `"rpart"`, `"cforest"`, `"coxph"`, `"coxtime"`, `"deepsurv"`, `"dnnsurv"`, `"akritas"`, `"survival_forest"`. The machine learning method to fit survival survival curves of time to censoring in each time window. Similar to `event.method`. Default is `"survSuperLearner"`, which may perform well with a decent amount of events and censoring but may fail if too few events or too little censoring in one time window. If at least one of `event.method` and `censor.method` is `"survSuperLearner"`, then survival curves of both time to event and time to censoring are fitted by \code{\link{fit_survSuperLearner}}.
 #' @param event.control a returned value from \code{\link{fit_surv_option}} to control fitting survival curves of time to event. Ignored if `event.method` is chosen as `"survSuperLearner"`.
 #' @param censor.control a returned value from \code{\link{fit_surv_option}} to control fitting survival curves of time to censoring. Ignored if `event.method` is chosen as `"survSuperLearner"`.
 #' @param survSuperLearner.control a returned value from \code{\link{fit_surv_option}} to control fitting survival curves of time to event/censoring if `event.method` is chosen as `"survSuperLearner"`; ignored otherwise. Default specifies the library for both event and censoring to be `c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc")`.
@@ -37,13 +37,21 @@ SDRsurv<-function(
     event.formula=NULL,
     censor.formula=NULL,
     Q.formula=~.,
-    event.method=c("survSuperLearner","rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
-    censor.method=c("survSuperLearner","rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas"),
-    event.control=fit_surv_option(),
-    censor.control=fit_surv_option(),
-    survSuperLearner.control=fit_surv_option(
+    event.method=c("survSuperLearner","rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas","survival_forest"),
+    censor.method=c("survSuperLearner","rfsrc","ctree","rpart","cforest","coxph","coxtime","deepsurv","dnnsurv","akritas","survival_forest"),
+    event.control=if(event.method!="survSuperLearner"){
+        fit_surv_option()
+    }else{fit_surv_option(
         option=list(event.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc"),
-                    cens.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc"))),
+                    cens.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc")))},
+    censor.control=if(censor.method!="survSuperLearner"){
+        fit_surv_option()
+    }else{fit_surv_option(
+        option=list(event.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc"),
+                    cens.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc")))},
+    # survSuperLearner.control=fit_surv_option(
+    #     option=list(event.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc"),
+    #                 cens.SL.library=c("survSL.coxph","survSL.weibreg","survSL.gam","survSL.rfsrc"))),
     Q.SuperLearner.control=list(family=gaussian(),SL.library="SL.lm"),
     denom.survival.trunc=1e-3
 ){
@@ -51,11 +59,10 @@ SDRsurv<-function(
     assert_that(is.string(time.var))
     assert_that(is.string(event.var))
     
-    event.method<-match.arg(event.method)
-    censor.method<-match.arg(censor.method)
-    if(event.method=="survSuperLearner" || censor.method=="survSuperLearner"){
-        event.method<-censor.method<-"survSuperLearner"
-    }
+    # if(event.method=="survSuperLearner" || censor.method=="survSuperLearner"){
+    #     # event.method<-censor.method<-"survSuperLearner"
+    # }
+    use.survSuperLearner<-event.method=="survSuperLearner" || censor.method=="survSuperLearner"
     
     K<-length(visit.times) #number of visit times
     
@@ -64,7 +71,7 @@ SDRsurv<-function(
     ############################################################################
     
     #check variables correctly exist
-    if(!all(sapply(covariates,has_name,which=id.var))){
+    if(!all(sapply(covariates,has_name,id.var))){
         stop(paste(id.var,"not present in 1+ covariates data"))
     }
     if(!all(sapply(covariates,function(d) is.character(pull(d,.data[[id.var]]))))){
@@ -217,9 +224,9 @@ SDRsurv<-function(
     if(!inherits(censor.control,"fit_surv_option")){
         stop("censor.control is not a fit_surv_option object")
     }
-    if(!inherits(survSuperLearner.control,"fit_surv_option")){
-        stop("survSuperLearner.control is not a fit_surv_option object")
-    }
+    # if(!inherits(survSuperLearner.control,"fit_surv_option")){
+    #     stop("survSuperLearner.control is not a fit_surv_option object")
+    # }
     
     #check if Q.SuperLearner.control is a list and whether it specifies Y or X
     assert_that(is.list(Q.SuperLearner.control))
@@ -273,43 +280,67 @@ SDRsurv<-function(
                        "{time.var}":=left.shift.censoring(.data[[time.var]],.data[[event.var]]))
         }
         
-        #fit event
         event.surv.data<-left_join(history,event.follow.up.time,by=id.var)
-        if(event.method=="survSuperLearner"){
-            fit_surv_arg<-c(
-                list(method=event.method,formula=event.formula[[k-index.shift]],data=event.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
-                survSuperLearner.control
-            )
-            tryCatch({
-                do.call(fit_surv,fit_surv_arg)
-            },error=function(e){
-                stop("Error from survSuperLearner. Try other event.method and censor.method")
-            })
-        }else{
-            form<-as.formula(paste("Surv(",time.var,",",event.var,")",
-                                   paste(as.character(event.formula[[k-index.shift]]),collapse=""),
-                                   collapse=""))
-            fit_surv_arg<-c(
-                list(method=event.method,formula=form,data=event.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
-                event.control
-            )
-            pred_event_obj<-do.call(fit_surv,fit_surv_arg)
-            
-            
-            #fir censoring
-            censor.surv.data<-left_join(history,censor.follow.up.time,by=id.var)
-            form<-as.formula(paste("Surv(",time.var,",",event.var,")",
-                                   paste(as.character(censor.formula[[k-index.shift]]),collapse=""),
-                                   collapse=""))
-            fit_surv_arg<-c(
-                list(method=censor.method,formula=form,data=censor.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
-                censor.control
-            )
-            pred_censor_obj<-do.call(fit_surv,fit_surv_arg)
-            
-            
-            pred_event_censor(pred_event_obj,pred_censor_obj)
-        }
+        # if(use.survSuperLearner){
+        #     fit_surv_arg<-c(
+        #         list(method="survSuperLearner",formula=event.formula[[k-index.shift]],data=event.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
+        #         survSuperLearner.control
+        #     )
+        #     survSuperLearner.fit<-tryCatch({
+        #         do.call(fit_surv,fit_surv_arg)
+        #     },error=function(e){
+        #         stop("Error from survSuperLearner. Try other event.method and censor.method")
+        #     })
+        # }
+        
+        #fit event
+        # if(event.method=="survSuperLearner"){
+        #     pred_event_obj<-survSuperLearner.fit$event
+        # }else{
+        #     form<-as.formula(paste("Surv(",time.var,",",event.var,")",
+        #                            paste(as.character(event.formula[[k-index.shift]]),collapse=""),
+        #                            collapse=""))
+        #     fit_surv_arg<-c(
+        #         list(method=event.method,formula=form,data=event.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
+        #         event.control
+        #     )
+        #     pred_event_obj<-do.call(fit_surv,fit_surv_arg)
+        # }
+        
+        form<-as.formula(paste("Surv(",time.var,",",event.var,")",
+                               paste(as.character(event.formula[[k-index.shift]]),collapse=""),
+                               collapse=""))
+        fit_surv_arg<-c(
+            list(method=event.method,formula=form,data=event.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
+            event.control
+        )
+        pred_event_obj<-do.call(fit_surv,fit_surv_arg)
+        
+        # if(censor.method=="survSuperLearner"){
+        #     pred_censor_obj<-survSuperLearner.fit$censor
+        # }else{
+        #     censor.surv.data<-left_join(history,censor.follow.up.time,by=id.var)
+        #     form<-as.formula(paste("Surv(",time.var,",",event.var,")",
+        #                            paste(as.character(censor.formula[[k-index.shift]]),collapse=""),
+        #                            collapse=""))
+        #     fit_surv_arg<-c(
+        #         list(method=censor.method,formula=form,data=censor.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
+        #         censor.control
+        #     )
+        #     pred_censor_obj<-do.call(fit_surv,fit_surv_arg)
+        # }
+        
+        censor.surv.data<-left_join(history,censor.follow.up.time,by=id.var)
+        form<-as.formula(paste("Surv(",time.var,",",event.var,")",
+                               paste(as.character(censor.formula[[k-index.shift]]),collapse=""),
+                               collapse=""))
+        fit_surv_arg<-c(
+            list(method=censor.method,formula=form,data=censor.surv.data,id.var=id.var,time.var=time.var,event.var=event.var),
+            censor.control
+        )
+        pred_censor_obj<-do.call(fit_surv,fit_surv_arg)
+        
+        pred_event_censor(pred_event_obj,pred_censor_obj)
     })
     
     ############################################################################
